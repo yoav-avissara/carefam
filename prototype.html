@@ -36,7 +36,9 @@
   .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
   .title { font-size:19px; font-weight:700; }
   .filters { display:flex; gap:10px; margin-left:18px; position:relative; }
-  .pill { display:flex; align-items:center; gap:6px; border:1px solid var(--gray-300); border-radius:7px; padding:6px 10px; font-size:12.5px; color:var(--gray-700); background:#fff; cursor:pointer; user-select:none; }
+  .table-filters { display:flex; gap:10px; align-items:center; padding:12px 22px; border-bottom:1px solid var(--line); }
+  .pill { display:flex; align-items:center; gap:6px; border:1px solid var(--gray-300); border-radius:7px; padding:6px 10px; font-size:12.5px; color:var(--gray-700); background:#fff; cursor:pointer; user-select:none; position:relative; }
+  .clear-filters-link { font-size:12px; color:var(--blue); cursor:pointer; text-decoration:underline; align-self:center; white-space:nowrap; }
   .pill:hover { border-color:var(--blue); }
   .pill b { color:var(--ink); font-weight:600; }
   .topbar-left { display:flex; align-items:center; position:relative; }
@@ -67,8 +69,13 @@
   .notif-action:hover { text-decoration:underline; }
   .notif-empty { padding:22px 14px; text-align:center; font-size:12px; color:var(--gray-500); }
 
-  .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
-  .card { background:var(--gray-100); border-radius:10px; padding:14px 16px; }
+  .cards { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:20px; }
+  .card { background:var(--gray-100); border-radius:10px; padding:14px 16px; cursor:pointer; transition:background 0.12s, box-shadow 0.12s; border:2px solid transparent; }
+  .card:hover { background:#EAECEE; }
+  .card.card-active { background:var(--new-accent-bg); border-color:var(--blue); }
+  .card.card-active .num, .card.card-active .lbl { color:var(--blue); }
+  .card.card-total { background:#fff; border-color:var(--gray-300); }
+  .card.card-total:hover { background:var(--gray-100); }
   .card .num { font-size:22px; font-weight:800; margin-right:6px; }
   .card .lbl { font-size:13px; color:var(--gray-700); font-weight:500; }
 
@@ -190,12 +197,6 @@
       <div class="topbar-left">
         <div class="title">In-Process</div>
         <div class="filters">
-          <div class="pill" id="prof-pill" onclick="toggleMenu(event,'menu-prof')">Profession: <b id="prof-val">All</b> ▾
-            <div class="filter-menu" id="menu-prof" onclick="event.stopPropagation()"></div>
-          </div>
-          <div class="pill" id="fac-pill" onclick="toggleMenu(event,'menu-fac')">Facility: <b id="fac-val">All</b> ▾
-            <div class="filter-menu" id="menu-fac" onclick="event.stopPropagation()"></div>
-          </div>
           <div class="pill" id="owner-pill" onclick="toggleMenu(event,'menu-owner')">Viewing as: <b id="owner-val">Regional Recruiter</b> ▾
             <div class="filter-menu" id="menu-owner" onclick="event.stopPropagation()"></div>
           </div>
@@ -243,6 +244,19 @@
     </div>
 
     <div class="cards" id="cards"></div>
+
+    <div class="table-filters">
+      <div class="pill" id="prof-pill" onclick="toggleMenu(event,'menu-prof')">Profession: <b id="prof-val">All</b> ▾
+        <div class="filter-menu" id="menu-prof" onclick="event.stopPropagation()"></div>
+      </div>
+      <div class="pill" id="fac-pill" onclick="toggleMenu(event,'menu-fac')">Facility: <b id="fac-val">All</b> ▾
+        <div class="filter-menu" id="menu-fac" onclick="event.stopPropagation()"></div>
+      </div>
+      <div class="pill" id="status-pill" onclick="toggleMenu(event,'menu-status')">Status: <b id="status-val">All</b> ▾
+        <div class="filter-menu" id="menu-status" onclick="event.stopPropagation()"></div>
+      </div>
+      <div class="clear-filters-link" id="clear-filters-link" onclick="clearAllFilters()" style="display:none;">Clear filters ✕</div>
+    </div>
 
     <div class="table-wrap">
       <table>
@@ -340,7 +354,7 @@ const STAGE_META = {
 
 function initials(name) { return name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
 
-let state = { prof:"All", fac:"All", ownerView:"All" };
+let state = { prof:"All", fac:"All", ownerView:"All", stage:"All", status:"All" };
 
 function populateMenus() {
   const profs = ["All", ...Array.from(new Set(CANDIDATES.map(c=>c.prof)))];
@@ -352,12 +366,18 @@ function populateMenus() {
     `<div class="${state.fac===f?'sel':''}" onclick="setFilter('fac','${f}')">${f}</div>`).join("");
   document.getElementById("menu-owner").innerHTML = owners.map(o =>
     `<div class="${state.ownerView===o?'sel':''}" onclick="setFilter('ownerView','${o}')">${o === "All" ? "Regional Recruiter (all)" : o}</div>`).join("");
+  const statuses = [
+    ["All", "All"], ["breach", "Breached"], ["atrisk", "At risk"],
+    ["waiting", "Awaiting candidate"], ["ontrack", "On track"], ["none", "Not yet tracked"],
+  ];
+  document.getElementById("menu-status").innerHTML = statuses.map(([key, label]) =>
+    `<div class="${state.status===key?'sel':''}" onclick="setFilter('status','${key}','${label}')">${label}</div>`).join("");
 }
 
-function setFilter(kind, value) {
+function setFilter(kind, value, displayLabel) {
   state[kind] = value;
-  const labelId = kind === 'prof' ? 'prof-val' : kind === 'fac' ? 'fac-val' : 'owner-val';
-  document.getElementById(labelId).textContent = (kind === 'ownerView' && value === 'All') ? 'Regional Recruiter' : value;
+  const labelId = kind === 'prof' ? 'prof-val' : kind === 'fac' ? 'fac-val' : kind === 'status' ? 'status-val' : 'owner-val';
+  document.getElementById(labelId).textContent = displayLabel ?? ((kind === 'ownerView' && value === 'All') ? 'Regional Recruiter' : value);
   closeAllMenus();
   populateMenus();
   render();
@@ -365,23 +385,54 @@ function setFilter(kind, value) {
 
 const SLA_PRIORITY = { breach: 0, waiting: 1, atrisk: 2, ontrack: 3, none: 4 };
 
-function filtered() {
+function baseFiltered() {
   return CANDIDATES.filter(c =>
     (state.prof === "All" || c.prof === state.prof) &&
     (state.fac === "All" || c.facility === state.fac) &&
     (state.ownerView === "All" || owner(c.facility, c.stage).name === state.ownerView)
+  );
+}
+
+function filtered() {
+  return baseFiltered().filter(c =>
+    (state.stage === "All" || c.stage === state.stage) &&
+    (state.status === "All" || c.sla === state.status)
   ).sort((a, b) => SLA_PRIORITY[a.sla] - SLA_PRIORITY[b.sla]);
 }
 
-function renderCards(list) {
+function toggleStageFilter(stage) {
+  state.stage = (state.stage === stage) ? "All" : stage;
+  render();
+}
+
+function clearAllFilters() {
+  state = { prof:"All", fac:"All", ownerView:"All", stage:"All", status:"All" };
+  document.getElementById("prof-val").textContent = "All";
+  document.getElementById("fac-val").textContent = "All";
+  document.getElementById("owner-val").textContent = "Regional Recruiter";
+  document.getElementById("status-val").textContent = "All";
+  populateMenus();
+  render();
+}
+
+function renderCards() {
+  const base = baseFiltered();
   const counts = { request:0, interviewing:0, paperwork:0, orientation:0 };
-  list.forEach(c => counts[c.stage]++);
-  document.getElementById("cards").innerHTML = `
-    <div class="card"><span class="num">${counts.request}</span><span class="lbl">Interview Request</span></div>
-    <div class="card"><span class="num">${counts.interviewing}</span><span class="lbl">Interviewing</span></div>
-    <div class="card"><span class="num">${counts.paperwork}</span><span class="lbl">Paperwork</span></div>
-    <div class="card"><span class="num">${counts.orientation}</span><span class="lbl">Orientation</span></div>
-  `;
+  base.forEach(c => counts[c.stage]++);
+  const cardDef = [
+    ["request", "Interview Request"],
+    ["interviewing", "Interviewing"],
+    ["paperwork", "Paperwork"],
+    ["orientation", "Orientation"],
+  ];
+  const totalCard = `
+    <div class="card card-total ${state.stage === 'All' ? 'card-active' : ''}" onclick="toggleStageFilter('All')">
+      <span class="num">${base.length}</span><span class="lbl">Total</span>
+    </div>`;
+  document.getElementById("cards").innerHTML = totalCard + cardDef.map(([key, label]) => `
+    <div class="card ${state.stage === key ? 'card-active' : ''}" onclick="toggleStageFilter('${key}')">
+      <span class="num">${counts[key]}</span><span class="lbl">${label}</span>
+    </div>`).join("");
 }
 
 function renderRows(list) {
@@ -463,10 +514,12 @@ function renderNotifications() {
 
 function render() {
   const list = filtered();
-  renderCards(list);
+  renderCards();
   renderRows(list);
   renderNotifications();
   document.getElementById("result-count").textContent = list.length + " of " + CANDIDATES.length + " candidates shown";
+  const anyActive = state.prof !== "All" || state.fac !== "All" || state.ownerView !== "All" || state.stage !== "All" || state.status !== "All";
+  document.getElementById("clear-filters-link").style.display = anyActive ? "flex" : "none";
 }
 
 function closeAllMenus(except) {
