@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Carefam — In-Process (proposed)</title>
+<style>
+  :root{
+    --ink:#17181A; --gray-700:#4B5157; --gray-500:#8A9099; --gray-300:#D9DCE1; --gray-100:#F4F8F9;
+    --line:#E7E9EC; --blue:#4A6CF7;
+    --green-bg:#E7FBE9; --green-tx:#1E7A34;
+    --purple-bg:#F2F1FF; --purple-tx:#5B4FE0;
+    --tan-bg:#FBF0DC; --tan-tx:#8A6D23;
+    --sky-bg:#E7F3FF; --sky-tx:#1B6FB8;
+    --red:#E0483D; --amber-tx:#B26A00; --amber-dot:#F0A400;
+    --new-accent:#128A5E; --new-accent-bg:#E7F7F1;
+    --wait-dot:#6B7280; --wait-tx:#4B5563; --wait-bg:#F0F1F3;
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#EDEFF2; color:var(--ink); -webkit-font-smoothing:antialiased; }
+  .app {
+    display:flex; width:1500px; margin:24px auto; background:#fff; border-radius:10px;
+    box-shadow:0 1px 3px rgba(20,20,30,0.08), 0 12px 32px rgba(20,20,30,0.06); border:1px solid var(--line);
+  }
+  .sidebar {
+    width:60px; background:#fff; border-right:1px solid var(--line); display:flex; flex-direction:column;
+    align-items:center; padding:18px 0; gap:22px; border-radius:10px 0 0 10px;
+  }
+  .avatar-cr { width:32px;height:32px;border-radius:50%; background:#6B5CE0; color:#fff; font-size:12px;font-weight:700; display:flex;align-items:center;justify-content:center; margin-bottom:8px; }
+  .side-icon { width:34px;height:34px;border-radius:8px; display:flex;align-items:center;justify-content:center; color:var(--gray-500); position:relative; cursor:pointer; }
+  .side-icon:hover { background:var(--gray-100); }
+  .side-icon.active { background:var(--gray-100); color:var(--ink); }
+  .side-icon .dot { position:absolute; top:2px; right:4px; width:7px;height:7px;border-radius:50%; background:var(--red); }
+
+  .main { flex:1; padding:22px 28px 30px 28px; min-width:0; }
+  .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .title { font-size:19px; font-weight:700; }
+  .filters { display:flex; gap:10px; margin-left:18px; position:relative; }
+  .pill { display:flex; align-items:center; gap:6px; border:1px solid var(--gray-300); border-radius:7px; padding:6px 10px; font-size:12.5px; color:var(--gray-700); background:#fff; cursor:pointer; user-select:none; }
+  .pill:hover { border-color:var(--blue); }
+  .pill b { color:var(--ink); font-weight:600; }
+  .topbar-left { display:flex; align-items:center; position:relative; }
+  .filter-menu { position:absolute; top:36px; left:0; width:170px; background:#fff; border:1px solid var(--line); border-radius:8px; box-shadow:0 6px 18px rgba(20,20,30,0.12); padding:6px; z-index:20; display:none; max-height:260px; overflow:auto; }
+  .filter-menu.open { display:block; }
+  .filter-menu div { padding:7px 10px; font-size:12.5px; border-radius:6px; cursor:pointer; color:var(--gray-700); }
+  .filter-menu div:hover { background:var(--gray-100); color:var(--ink); }
+  .filter-menu div.sel { color:var(--blue); font-weight:600; }
+
+  .avail { font-size:12.5px; color:var(--blue); display:flex; align-items:center; gap:6px; font-weight:500; }
+  .avail b { font-weight:700; }
+  .topbar-right { display:flex; align-items:center; }
+  .bell-wrap { position:relative; display:flex; align-items:center; margin-left:20px; cursor:pointer; }
+  .bell-badge { position:absolute; top:-5px; right:-6px; background:var(--red); color:#fff; font-size:9.5px; font-weight:800; min-width:15px; height:15px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px; border:1.5px solid #fff; }
+  .notif-panel { position:absolute; top:32px; right:-10px; width:310px; max-height:360px; overflow:auto; background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:0 10px 28px rgba(20,20,30,0.16); z-index:30; display:none; }
+  .notif-panel.open { display:block; }
+  .notif-head { padding:12px 14px; font-size:12.5px; font-weight:700; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:#fff; }
+  .notif-head span.count { color:var(--gray-500); font-weight:500; font-size:11.5px; }
+  .notif-item { padding:11px 14px; border-bottom:1px solid var(--line); display:flex; gap:10px; align-items:flex-start; }
+  .notif-item:last-child { border-bottom:none; }
+  .notif-dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .notif-dot.breach { background:var(--red); }
+  .notif-dot.risk { background:var(--amber-dot); }
+  .notif-body { flex:1; }
+  .notif-name { font-size:12.5px; font-weight:700; }
+  .notif-sub { font-size:11px; color:var(--gray-500); margin-top:1px; }
+  .notif-action { font-size:11px; font-weight:700; color:var(--blue); margin-top:5px; cursor:pointer; display:inline-block; }
+  .notif-action:hover { text-decoration:underline; }
+  .notif-empty { padding:22px 14px; text-align:center; font-size:12px; color:var(--gray-500); }
+
+  .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+  .card { background:var(--gray-100); border-radius:10px; padding:14px 16px; }
+  .card .num { font-size:22px; font-weight:800; margin-right:6px; }
+  .card .lbl { font-size:13px; color:var(--gray-700); font-weight:500; }
+
+  .table-wrap { border:1px solid var(--line); border-radius:10px; max-height:620px; overflow:auto; position:relative; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  thead th { text-align:left; font-weight:600; color:var(--gray-500); font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; padding:10px 14px; background:#FBFCFD; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:2; }
+  thead th.new-col { color:var(--new-accent); }
+  tbody td { padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tbody tr:last-child td { border-bottom:none; }
+  .name-cell { display:flex; align-items:center; gap:10px; }
+  .avt { width:30px;height:30px;border-radius:50%; background:#CFE9EA; color:#2B7A7E; font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center; position:relative; flex-shrink:0; }
+  .avt .role-dot { position:absolute; bottom:-2px; right:-2px; width:10px; height:10px; border-radius:50%; background:#6B5CE0; border:1.5px solid #fff; }
+  .name-txt { font-weight:600; font-size:13.5px; }
+  .sub { color:var(--gray-500); font-size:11.5px; }
+  .fac-name { color:var(--gray-700); font-size:12.5px; }
+  .fac-type { color:var(--gray-500); font-size:10.5px; text-transform:uppercase; letter-spacing:.02em; display:block; margin-top:1px; }
+
+  .badge { display:inline-block; padding:4px 10px; border-radius:20px; font-size:11.5px; font-weight:600; white-space:nowrap; }
+  .b-blue { background:var(--sky-bg); color:var(--sky-tx); }
+  .b-green { background:var(--green-bg); color:var(--green-tx); }
+  .b-purple { background:var(--purple-bg); color:var(--purple-tx); }
+  .b-tan { background:var(--tan-bg); color:var(--tan-tx); }
+
+  .note-red { color:var(--red); font-size:11.5px; font-weight:500; }
+  .note-amber { color:var(--amber-tx); font-size:11.5px; font-weight:600; }
+  .note-gray { color:var(--gray-500); font-size:11.5px; }
+  .chev { color:var(--gray-300); font-size:14px; }
+
+  .owner-cell { font-size:12.5px; }
+  .owner-role { color:var(--gray-500); font-size:10.5px; text-transform:uppercase; letter-spacing:.02em; display:block; margin-bottom:1px;}
+  .owner-name { font-weight:600; }
+
+  .sla { display:flex; align-items:center; gap:7px; position:relative; }
+  .sla-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .sla-ontrack .sla-dot{ background:#28A745; }
+  .sla-atrisk .sla-dot{ background:var(--amber-dot); }
+  .sla-breach .sla-dot{ background:var(--red); }
+  .sla-none .sla-dot{ background:var(--gray-300); }
+  .sla-waiting .sla-dot{ background:var(--wait-dot); }
+  .sla-text { font-size:12px; font-weight:600; }
+  .sla-ontrack .sla-text{ color:#1E7A34; }
+  .sla-atrisk .sla-text{ color:var(--amber-tx); }
+  .sla-breach .sla-text{ color:var(--red); }
+  .sla-waiting .sla-text{ color:var(--wait-tx); }
+  .sla-none .sla-text{ color:var(--gray-300); font-weight:500; }
+  .sla-none .sla-sub{ display:none; }
+  .sla-sub { font-size:10.5px; color:var(--gray-500); display:block; margin-top:1px; }
+
+  .action-row { display:flex; flex-direction:row; align-items:center; gap:8px; }
+  .sla-action-btn { display:inline-flex; align-items:center; gap:5px; background:var(--blue); color:#fff; font-size:11.5px; font-weight:700; padding:5px 11px; border-radius:7px; cursor:pointer; box-shadow:0 1px 2px rgba(74,108,247,0.35); position:relative; white-space:nowrap; }
+  .sla-action-btn:hover { background:#3A5CE0; }
+  .sla-action-btn.nudged { background:var(--gray-300); color:var(--gray-700); cursor:default; box-shadow:none; }
+  .sla-action-btn.flag-btn { background:var(--amber-dot); color:#5C3D00; box-shadow:0 1px 2px rgba(240,164,0,0.35); }
+  .sla-action-btn.flag-btn:hover { background:#D89200; }
+  .sla-autoflag-badge { font-size:11.5px; color:var(--amber-tx); font-weight:700; }
+  .sla-secondary-link { font-size:11px; color:var(--gray-500); cursor:pointer; text-decoration:underline; display:inline-block; white-space:nowrap; }
+  .sla-secondary-link:hover { color:var(--gray-700); }
+  .sla-flagged-note { font-size:11.5px; color:var(--amber-tx); font-weight:700; margin-top:4px; }
+  .sla-persistent-flag { font-size:11.5px; color:var(--red); font-weight:700; margin-top:4px; }
+  .sla-advisory { font-size:11.5px; color:var(--amber-tx); font-weight:600; }
+
+  .reassign-menu { position:absolute; top:32px; left:0; width:190px; background:#fff; border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 22px rgba(20,20,30,0.16); z-index:15; display:none; overflow:hidden; }
+  .reassign-menu.open { display:block; }
+  .reassign-menu .rm-head { font-size:10.5px; font-weight:700; color:var(--gray-500); text-transform:uppercase; padding:9px 12px 5px; }
+  .reassign-menu div.rm-item { padding:8px 12px; font-size:12.5px; cursor:pointer; }
+  .reassign-menu div.rm-item:hover { background:var(--gray-100); }
+
+  .legend { margin-top:14px; display:flex; gap:18px; align-items:center; font-size:11.5px; color:var(--gray-500); flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:6px; }
+  .legend-dot { width:8px; height:8px; border-radius:50%; }
+  .new-tag { display:inline-block; font-size:9.5px; font-weight:800; letter-spacing:.04em; color:var(--new-accent); background:var(--new-accent-bg); border:1px solid #BFE6D8; border-radius:5px; padding:1px 5px; margin-left:6px; vertical-align:middle; text-transform:uppercase; }
+  .result-count { font-size:11.5px; color:var(--gray-500); margin:8px 2px 0; }
+
+  .digest-overlay { display:none; position:fixed; inset:0; background:rgba(20,20,30,0.35); z-index:50; align-items:center; justify-content:center; }
+  .digest-overlay.open { display:flex; }
+  .digest-modal { width:460px; max-height:78vh; background:#fff; border-radius:12px; box-shadow:0 20px 50px rgba(20,20,30,0.25); display:flex; flex-direction:column; overflow:hidden; }
+  .digest-head { padding:16px 18px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .digest-title { font-size:14.5px; font-weight:700; }
+  .digest-sub { font-size:11.5px; color:var(--gray-500); margin-top:3px; line-height:1.4; }
+  .digest-close { cursor:pointer; color:var(--gray-500); font-size:14px; padding:2px 4px; }
+  .digest-close:hover { color:var(--ink); }
+  .digest-body { padding:6px 0; overflow-y:auto; }
+  .digest-row { padding:11px 18px; border-bottom:1px solid var(--line); display:flex; gap:10px; align-items:flex-start; }
+  .digest-row:last-child { border-bottom:none; }
+  .digest-dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .digest-name { font-size:12.5px; font-weight:700; }
+  .digest-meta { font-size:11px; color:var(--gray-500); margin-top:1px; }
+  .digest-empty { padding:26px 18px; text-align:center; font-size:12px; color:var(--gray-500); }
+  .digest-section-head { padding:10px 18px 4px; font-size:10.5px; font-weight:700; color:var(--gray-500); text-transform:uppercase; }
+  .weekly-row { padding:12px 18px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+  .weekly-row:last-child { border-bottom:none; }
+  .weekly-metric { font-size:12.5px; color:var(--ink); }
+  .weekly-count { font-size:15px; font-weight:700; color:var(--ink); }
+  .weekly-count.flag-count { color:var(--red); }
+  .weekly-note { padding:12px 18px; font-size:11px; color:var(--gray-500); font-style:italic; border-top:1px solid var(--line); }
+  .weekly-drill { cursor:pointer; }
+  .weekly-drill:hover { background:var(--gray-100); }
+  .weekly-drill-hint { font-size:10px; color:var(--gray-500); font-weight:400; margin-left:4px; }
+  .weekly-drill-list { background:#FBEAE8; }
+  .weekly-drill-row { padding:9px 18px 9px 30px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; }
+  .weekly-drill-row:last-child { border-bottom:none; }
+  .weekly-drill-name { font-size:12px; font-weight:700; color:var(--red); }
+  .weekly-drill-meta { font-size:11px; color:#B23A30; }
+  .weekly-drill-empty { padding:10px 18px 10px 30px; font-size:11.5px; color:var(--gray-500); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="avatar-cr">CR</div>
+    <div class="side-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 11L12 4L21 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10V20H19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="dot"></div></div>
+    <div class="side-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <div class="side-icon active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 6H20M4 12H20M4 18H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="title">In-Process</div>
+        <div class="filters">
+          <div class="pill" id="prof-pill" onclick="toggleMenu(event,'menu-prof')">Profession: <b id="prof-val">All</b> ▾
+            <div class="filter-menu" id="menu-prof" onclick="event.stopPropagation()"></div>
+          </div>
+          <div class="pill" id="fac-pill" onclick="toggleMenu(event,'menu-fac')">Facility: <b id="fac-val">All</b> ▾
+            <div class="filter-menu" id="menu-fac" onclick="event.stopPropagation()"></div>
+          </div>
+          <div class="pill" id="owner-pill" onclick="toggleMenu(event,'menu-owner')">Viewing as: <b id="owner-val">Regional Recruiter</b> ▾
+            <div class="filter-menu" id="menu-owner" onclick="event.stopPropagation()"></div>
+          </div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="avail">Regular weekly availability: <b>Mon-Fri</b> ▾</div>
+        <div class="pill" style="margin-right:14px;" onclick="event.stopPropagation(); openDigest()">✉ Preview daily digest</div>
+        <div class="pill" style="margin-right:14px;" onclick="event.stopPropagation(); openWeekly()">📊 Preview weekly rollup</div>
+        <div class="bell-wrap" onclick="toggleMenu(event,'notif-panel')">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M18 16v-5a6 6 0 10-12 0v5l-2 3h16l-2-3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.5 21a2.5 2.5 0 005 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <div class="bell-badge" id="bell-count">0</div>
+          <div class="notif-panel" id="notif-panel" onclick="event.stopPropagation()">
+            <div class="notif-head">Notifications <span class="count" id="notif-count-label"></span></div>
+            <div id="notif-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="digest-overlay" id="digest-overlay" onclick="closeDigest()">
+      <div class="digest-modal" onclick="event.stopPropagation()">
+        <div class="digest-head">
+          <div>
+            <div class="digest-title">Daily digest</div>
+            <div class="digest-sub">Sent once a day to each owner — everything on their plate at or past the at-risk threshold.</div>
+          </div>
+          <div class="digest-close" onclick="closeDigest()">✕</div>
+        </div>
+        <div class="digest-body" id="digest-body"></div>
+      </div>
+    </div>
+
+    <div class="digest-overlay" id="weekly-overlay" onclick="closeWeekly()">
+      <div class="digest-modal" onclick="event.stopPropagation()">
+        <div class="digest-head">
+          <div>
+            <div class="digest-title">Weekly rollup</div>
+            <div class="digest-sub">Replaces the current reply-all report. Sent to regionals — counts and trend only, no candidate list to route around.</div>
+          </div>
+          <div class="digest-close" onclick="closeWeekly()">✕</div>
+        </div>
+        <div class="digest-body" id="weekly-body"></div>
+      </div>
+    </div>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:17%">Name</th>
+            <th style="width:8%">Profession</th>
+            <th style="width:15%">Facility</th>
+            <th style="width:13%" class="new-col">Owner <span class="new-tag">New</span></th>
+            <th style="width:15%" class="new-col">SLA <span class="new-tag">New</span></th>
+            <th style="width:18%">Next Step</th>
+            <th style="width:10%">Stage</th>
+            <th style="width:2%"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="result-count" id="result-count"></div>
+    <div class="result-count" style="margin-top:0;">Sorted by urgency — breached first</div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#28A745"></div> On track</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber-dot)"></div> At risk</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Breached (owner-side)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--wait-dot)"></div> Awaiting candidate</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--gray-300)"></div> Not yet tracked (pre-decision)</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// v1 owner rule: the facility hiring manager the brief already names is the
+// owner for both configurable stages. No distinct Paperwork/Orientation
+// contact roles — the brief describes one facility-side role, and inventing
+// a second one isn't supported by the source material. If Carefam facilities
+// later designate specialized staff for either stage, this same rule
+// generalizes to a per-stage contact without a redesign — that's a future
+// possibility noted in Assumptions, not something assumed true here.
+const FACILITIES = {
+  "Carefam at Taunton":  { type: "Skilled Nursing Facility", manager: "D. Okafor" },
+  "Carefam at Sharon":   { type: "Assisted Living",          manager: "L. Fitzgerald" },
+  "Carefam at Brockton": { type: "Skilled Nursing Facility", manager: "A. Whitfield" },
+  "Carefam at Wrentham": { type: "Assisted Living",          manager: "P. Souza" },
+  "Carefam at Meridian": { type: "Home Care Agency",         manager: "R. Delgado" }
+};
+
+function owner(facility, stage) {
+  const f = FACILITIES[facility];
+  return { role: "Hiring Manager", name: f.manager };
+}
+
+// Informational threshold for candidate-side "Awaiting candidate" rows: past
+// roughly double the normal automated-ping cadence, worth a plain surfaced
+// note — not urgent-styled, not pushed, since it still isn't an owner failure.
+const CANDIDATE_WAIT_ALERT_THRESHOLD = 14;
+// Past this many days, a Flag with no resolution stops being "just flagged"
+// and becomes a persistent problem — surfaced only in the weekly aggregate
+// count (no per-candidate rows there, matching the rule we already set),
+// never a new named-recipient channel we don't have evidence for.
+const FLAG_ESCALATE_DAYS = 3;
+
+const CANDIDATES = [
+  { id:1,  name:"Rose Amazan",          prof:"RN",  facility:"Carefam at Taunton",  stage:"orientation", sla:"ontrack", slaSub:"3d until SLA", note:"Pending orientation date", noteColor:"gray" },
+  { id:2,  name:"Kim Berger",           prof:"LPN", facility:"Carefam at Taunton",  stage:"paperwork",   sla:"atrisk",  slaSub:"70% of SLA elapsed" },
+  { id:3,  name:"Kimberly Campanella",  prof:"RN",  facility:"Carefam at Sharon",   stage:"paperwork",   sla:"ontrack", slaSub:"5d until SLA" },
+  { id:4,  name:"Dawn Cudmore",         prof:"LPN", facility:"Carefam at Taunton",  stage:"interviewing",sla:"breach",  slaSub:"Auto-escalated to you — no decision in 4 months" },
+  { id:5,  name:"James Whitfield",      prof:"LPN", facility:"Carefam at Brockton", stage:"paperwork",   sla:"waiting", waitingDays:16, slaSub:"Candidate side — not owner SLA", note:"16d, no response — past normal cadence, worth a call", noteColor:"amber" },
+  { id:6,  name:"Maria Alvarez",        prof:"CNA", facility:"Carefam at Sharon",   stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
+  { id:7,  name:"Linda Okoro",          prof:"RN",  facility:"Carefam at Brockton", stage:"interviewing",sla:"none",    slaSub:"Not yet tracked" },
+  { id:8,  name:"Carlos Mendez",        prof:"HHA", facility:"Carefam at Meridian", stage:"paperwork",   sla:"atrisk",  slaSub:"65% of SLA elapsed" },
+  { id:9,  name:"Angela Fitzgerald",    prof:"LPN", facility:"Carefam at Wrentham", stage:"orientation", sla:"ontrack", slaSub:"1d until SLA", note:"Pending orientation date", noteColor:"gray" },
+  { id:10, name:"Priya Nair",           prof:"RN",  facility:"Carefam at Taunton",  stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
+  { id:11, name:"Robert Chen",          prof:"CNA", facility:"Carefam at Brockton", stage:"paperwork",   sla:"waiting", waitingDays:9,  slaSub:"Candidate side — not owner SLA", note:"No response to paperwork request, 9d", noteColor:"gray" },
+  { id:12, name:"Sandra Wolcott",       prof:"LPN", facility:"Carefam at Sharon",   stage:"interviewing",sla:"none",    slaSub:"Not yet tracked" },
+  { id:13, name:"Devon Marsh",          prof:"HHA", facility:"Carefam at Meridian", stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
+  { id:14, name:"Fatima Haidari",       prof:"RN",  facility:"Carefam at Wrentham", stage:"paperwork",   sla:"ontrack", slaSub:"6d until SLA" },
+  { id:15, name:"Thomas Nguyen",        prof:"CNA", facility:"Carefam at Taunton",  stage:"interviewing",sla:"none",    slaSub:"Not yet tracked" },
+  { id:16, name:"Rachel Odom",          prof:"LPN", facility:"Carefam at Brockton", stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
+  { id:17, name:"Miguel Santos",        prof:"HHA", facility:"Carefam at Meridian", stage:"orientation", sla:"atrisk",  slaSub:"80% of SLA elapsed", note:"Pending orientation date", noteColor:"gray" },
+  { id:18, name:"Grace Kimani",         prof:"RN",  facility:"Carefam at Sharon",   stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
+  { id:19, name:"Daniel Feld",          prof:"CNA", facility:"Carefam at Wrentham", stage:"interviewing",sla:"none",    slaSub:"Not yet tracked" },
+  { id:20, name:"Yolanda Reyes",        prof:"LPN", facility:"Carefam at Taunton",  stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
+  { id:21, name:"Elena Cruz",           prof:"LPN", facility:"Carefam at Wrentham", stage:"paperwork",   sla:"breach",  slaSub:"Auto-escalated to you" },
+  { id:22, name:"Patricia Woods",       prof:"HHA", facility:"Carefam at Meridian", stage:"paperwork",   sla:"breach",  slaSub:"Auto-escalated to you", nudged:true, flagged:true, flaggedDaysAgo:5 },
+  { id:23, name:"Marcus Bellamy",       prof:"RN",  facility:"Carefam at Taunton",  stage:"orientation", sla:"breach",  slaSub:"Auto-escalated to you", nudged:true, flagged:true, flaggedDaysAgo:1, autoFlagged:true }
+];
+
+const STAGE_META = {
+  request:      { label:"Interview Request",  badge:"Interview Request",  cls:"b-blue"   },
+  interviewing: { label:"Interviewing",       badge:"In-Person Interview",cls:"b-tan"    },
+  paperwork:    { label:"Paperwork",          badge:"Paperwork",          cls:"b-purple" },
+  orientation:  { label:"Orientation",        badge:"Orientation",        cls:"b-green"  }
+};
+
+function initials(name) { return name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
+
+let state = { prof:"All", fac:"All", ownerView:"All" };
+
+function populateMenus() {
+  const profs = ["All", ...Array.from(new Set(CANDIDATES.map(c=>c.prof)))];
+  const facs = ["All", ...Object.keys(FACILITIES)];
+  const owners = ["All", ...Array.from(new Set(CANDIDATES.map(c => owner(c.facility, c.stage).name))).sort()];
+  document.getElementById("menu-prof").innerHTML = profs.map(p =>
+    `<div class="${state.prof===p?'sel':''}" onclick="setFilter('prof','${p}')">${p}</div>`).join("");
+  document.getElementById("menu-fac").innerHTML = facs.map(f =>
+    `<div class="${state.fac===f?'sel':''}" onclick="setFilter('fac','${f}')">${f}</div>`).join("");
+  document.getElementById("menu-owner").innerHTML = owners.map(o =>
+    `<div class="${state.ownerView===o?'sel':''}" onclick="setFilter('ownerView','${o}')">${o === "All" ? "Regional Recruiter (all)" : o}</div>`).join("");
+}
+
+function setFilter(kind, value) {
+  state[kind] = value;
+  const labelId = kind === 'prof' ? 'prof-val' : kind === 'fac' ? 'fac-val' : 'owner-val';
+  document.getElementById(labelId).textContent = (kind === 'ownerView' && value === 'All') ? 'Regional Recruiter' : value;
+  closeAllMenus();
+  populateMenus();
+  render();
+}
+
+const SLA_PRIORITY = { breach: 0, waiting: 1, atrisk: 2, ontrack: 3, none: 4 };
+
+function filtered() {
+  return CANDIDATES.filter(c =>
+    (state.prof === "All" || c.prof === state.prof) &&
+    (state.fac === "All" || c.facility === state.fac) &&
+    (state.ownerView === "All" || owner(c.facility, c.stage).name === state.ownerView)
+  ).sort((a, b) => SLA_PRIORITY[a.sla] - SLA_PRIORITY[b.sla]);
+}
+
+function renderCards(list) {
+  const counts = { request:0, interviewing:0, paperwork:0, orientation:0 };
+  list.forEach(c => counts[c.stage]++);
+  document.getElementById("cards").innerHTML = `
+    <div class="card"><span class="num">${counts.request}</span><span class="lbl">Interview Request</span></div>
+    <div class="card"><span class="num">${counts.interviewing}</span><span class="lbl">Interviewing</span></div>
+    <div class="card"><span class="num">${counts.paperwork}</span><span class="lbl">Paperwork</span></div>
+    <div class="card"><span class="num">${counts.orientation}</span><span class="lbl">Orientation</span></div>
+  `;
+}
+
+function renderRows(list) {
+  document.getElementById("tbody").innerHTML = list.map(c => {
+    const stageMeta = STAGE_META[c.stage];
+    const own = owner(c.facility, c.stage);
+    const fac = FACILITIES[c.facility];
+    const slaCls = "sla-" + c.sla;
+    const slaLabel = c.sla === "none" ? "Not tracked" : c.sla === "ontrack" ? "On track" : c.sla === "atrisk" ? "At risk" : c.sla === "waiting" ? "Awaiting candidate" : "Breached";
+    let actionBtn = "";
+    const isSelfView = state.ownerView !== "All" && state.ownerView === own.name;
+    if (c.sla === "breach") {
+      if (isSelfView) {
+        // Nudge/Flag target the owner from someone else's perspective
+        // (regional, or the system). When the owner is looking at their own
+        // queue, "Nudge yourself" is meaningless — show status only.
+        actionBtn = `<div class="note-red" style="font-weight:600;">Flagged — visible to your regional recruiter</div>`;
+      } else if (c.flaggedDaysAgo >= FLAG_ESCALATE_DAYS) {
+        // Past the second threshold regardless of how it got flagged —
+        // urgency dominates provenance at this point.
+        actionBtn = `<div class="sla-persistent-flag">Unresolved · ${c.flaggedDaysAgo}d</div>`;
+      } else if (c.flagged) {
+        // Flagged but still within the first window: same amber tier as the
+        // Flag button itself, distinguishing system-triggered from a
+        // colleague's judgment call so trust in "Flagged" stays legible.
+        actionBtn = c.autoFlagged
+          ? `<div class="sla-autoflag-badge">Auto-flagged — no update after Nudge</div>`
+          : `<div class="sla-flagged-note">Flagged ✓</div>`;
+      } else {
+        // Severity ladder in color, not element type: blue Nudge (primary,
+        // first response), amber Flag (real button, not a text link — a
+        // secondary action still deserves button treatment).
+        actionBtn = `<div id="action-${c.id}" class="action-row">
+           ${c.nudged
+             ? `<div class="sla-action-btn nudged">Nudge sent →</div>`
+             : `<div class="sla-action-btn" onclick="nudge(${c.id})">Nudge ${own.name} →</div>`}
+           <div class="sla-action-btn flag-btn" onclick="flagEscalation(${c.id})" title="Flag for manual escalation">Flag</div>
+         </div>`;
+      }
+    }
+    return `
+      <tr>
+        <td><div class="name-cell"><div class="avt">${initials(c.name)}<span class="role-dot"></span></div><div class="name-txt">${c.name}</div></div></td>
+        <td class="sub">${c.prof}</td>
+        <td><div class="fac-name">${c.facility}</div><div class="fac-type">${fac.type}</div></td>
+        <td class="owner-cell"><span class="owner-role">${own.role}</span><span class="owner-name">${own.name}</span></td>
+        <td><div class="sla ${slaCls}" id="sla-${c.id}"><div class="sla-dot"></div><div><span class="sla-text">${slaLabel}</span><span class="sla-sub">${c.slaSub}</span></div></div></td>
+        <td class="${c.noteColor==='red'?'note-red':c.noteColor==='amber'?'note-amber':'note-gray'}">${c.note ? c.note : actionBtn || "&nbsp;"}</td>
+        <td><span class="badge ${stageMeta.cls}">${stageMeta.badge}</span></td>
+        <td class="chev">›</td>
+      </tr>`;
+  }).join("");
+}
+
+function renderNotifications() {
+  const flagged = CANDIDATES.filter(c => c.sla === "breach" || c.sla === "atrisk");
+  const badge = document.getElementById("bell-count");
+  const label = document.getElementById("notif-count-label");
+  const list = document.getElementById("notif-list");
+  if (flagged.length === 0) {
+    badge.style.display = "none";
+    label.textContent = "All clear";
+    list.innerHTML = `<div class="notif-empty">No candidates need action right now.</div>`;
+    return;
+  }
+  badge.style.display = "flex";
+  badge.textContent = flagged.length;
+  label.textContent = flagged.length + " need action";
+  list.innerHTML = flagged.map(c => `
+    <div class="notif-item">
+      <div class="notif-dot ${c.sla === 'breach' ? 'breach' : 'risk'}"></div>
+      <div class="notif-body">
+        <div class="notif-name">${c.name} — ${c.facility}</div>
+        <div class="notif-sub">${STAGE_META[c.stage].label} — ${c.nudged ? "Nudge sent" : c.slaSub}</div>
+        <div class="notif-action" onclick="${c.sla === 'breach' ? `nudge(${c.id})` : `resolveFromNotif(${c.id})`}">${c.sla === 'breach' ? (c.nudged ? 'Nudged ✓' : 'Nudge') : 'View candidate'}</div>
+      </div>
+    </div>`).join("");
+}
+
+function render() {
+  const list = filtered();
+  renderCards(list);
+  renderRows(list);
+  renderNotifications();
+  document.getElementById("result-count").textContent = list.length + " of " + CANDIDATES.length + " candidates shown";
+}
+
+function closeAllMenus(except) {
+  document.querySelectorAll('.filter-menu.open, .notif-panel.open, .reassign-menu.open').forEach(el => {
+    if (el.id !== except) el.classList.remove('open');
+  });
+}
+function toggleMenu(e, id) {
+  if (e) e.stopPropagation();
+  const el = document.getElementById(id);
+  const isOpen = el.classList.contains('open');
+  closeAllMenus(id);
+  el.classList.toggle('open', !isOpen);
+}
+function nudge(id) {
+  const c = CANDIDATES.find(c => c.id === id);
+  c.nudged = true;
+  render();
+}
+function flagEscalation(id) {
+  // No named recipient by design: the brief gives no evidence of a role
+  // above facility hiring manager or regional recruiter, and inventing one
+  // (like the old "Reassign to J. Alvarez — Regional") would repeat the
+  // same fabrication problem the ownership model already had to fix once.
+  // This still logs a real, timestamped action for the "actioned before
+  // breach" metric — it just doesn't pretend to route it anywhere specific.
+  const c = CANDIDATES.find(c => c.id === id);
+  c.flagged = true;
+  c.flaggedDaysAgo = 0;
+  c.autoFlagged = false;
+  render();
+}
+function resolveFromNotif(id) {
+  const c = CANDIDATES.find(c => c.id === id);
+  if (c.sla === "atrisk") { c.sla = "ontrack"; c.slaSub = "Reviewed"; }
+  render();
+}
+
+function openDigest() {
+  const targetOwner = state.ownerView;
+  const body = document.getElementById("digest-body");
+  if (targetOwner === "All") {
+    body.innerHTML = `<div class="digest-empty">The digest is sent per-owner, not as one shared list.<br>Pick a specific person under "Viewing as" (top left) to preview theirs.</div>`;
+  } else {
+    const slaRows = CANDIDATES.filter(c =>
+      (c.sla === "breach" || c.sla === "atrisk") && owner(c.facility, c.stage).name === targetOwner
+    );
+    const advisoryRows = CANDIDATES.filter(c =>
+      c.sla === "waiting" && c.waitingDays >= CANDIDATE_WAIT_ALERT_THRESHOLD && owner(c.facility, c.stage).name === targetOwner
+    );
+    if (slaRows.length === 0 && advisoryRows.length === 0) {
+      body.innerHTML = `<div class="digest-empty">Nothing at or past the at-risk threshold for ${targetOwner} today.</div>`;
+    } else {
+      let html = "";
+      if (slaRows.length > 0) {
+        html += slaRows.map(c => `
+          <div class="digest-row">
+            <div class="digest-dot" style="background:${c.sla === 'breach' ? 'var(--red)' : 'var(--amber-dot)'}"></div>
+            <div>
+              <div class="digest-name">${c.name} — ${c.prof} — ${c.facility}</div>
+              <div class="digest-meta">${STAGE_META[c.stage].label} · ${c.slaSub}</div>
+            </div>
+          </div>`).join("");
+      }
+      if (advisoryRows.length > 0) {
+        html += `<div class="digest-section-head">Worth a call — candidate unresponsive</div>`;
+        html += advisoryRows.map(c => `
+          <div class="digest-row">
+            <div class="digest-dot" style="background:var(--wait-dot)"></div>
+            <div>
+              <div class="digest-name">${c.name} — ${c.prof} — ${c.facility}</div>
+              <div class="digest-meta">${STAGE_META[c.stage].label} · ${c.waitingDays}d, no candidate response — not your SLA</div>
+            </div>
+          </div>`).join("");
+      }
+      body.innerHTML = html;
+    }
+  }
+  document.getElementById("digest-overlay").classList.add("open");
+}
+function closeDigest() {
+  document.getElementById("digest-overlay").classList.remove("open");
+}
+
+function openWeekly() {
+  const body = document.getElementById("weekly-body");
+  const counts = {
+    breach: CANDIDATES.filter(c => c.sla === "breach").length,
+    atrisk: CANDIDATES.filter(c => c.sla === "atrisk").length,
+    waiting: CANDIDATES.filter(c => c.sla === "waiting").length,
+    ontrack: CANDIDATES.filter(c => c.sla === "ontrack").length,
+  };
+  const unresolvedFlags = CANDIDATES.filter(c => c.flagged && c.flaggedDaysAgo >= FLAG_ESCALATE_DAYS);
+  body.innerHTML = `
+    <div class="weekly-row"><span class="weekly-metric">Breached (owner-side)</span><span class="weekly-count">${counts.breach}</span></div>
+    <div class="weekly-row"><span class="weekly-metric">At risk</span><span class="weekly-count">${counts.atrisk}</span></div>
+    <div class="weekly-row"><span class="weekly-metric">Awaiting candidate</span><span class="weekly-count">${counts.waiting}</span></div>
+    <div class="weekly-row"><span class="weekly-metric">On track</span><span class="weekly-count">${counts.ontrack}</span></div>
+    <div class="weekly-row weekly-drill" id="weekly-drill-toggle" onclick="toggleWeeklyDrill()">
+      <span class="weekly-metric">Flags open &gt; 3 days, unresolved <span class="weekly-drill-hint">(click for names)</span></span>
+      <span class="weekly-count flag-count">${unresolvedFlags.length}</span>
+    </div>
+    <div class="weekly-drill-list" id="weekly-drill-list" style="display:none;">
+      ${unresolvedFlags.length === 0
+        ? `<div class="weekly-drill-empty">Nothing unresolved past 3 days.</div>`
+        : unresolvedFlags.map(c => `
+            <div class="weekly-drill-row">
+              <span class="weekly-drill-name">${c.name}</span>
+              <span class="weekly-drill-meta">${c.facility} · ${owner(c.facility, c.stage).name} · ${c.flaggedDaysAgo}d unresolved</span>
+            </div>`).join("")}
+    </div>
+    <div class="weekly-note">This is the one exception to "no candidate names" — everything above stays aggregate on purpose, but a flag unresolved this long is a small enough set that naming it is the point, not a to-do-list risk. (Trend vs. last week needs historical data this demo doesn't have; shown here as a single current snapshot.)</div>
+  `;
+  document.getElementById("weekly-overlay").classList.add("open");
+}
+function toggleWeeklyDrill() {
+  const list = document.getElementById("weekly-drill-list");
+  list.style.display = list.style.display === "none" ? "block" : "none";
+}
+function closeWeekly() {
+  document.getElementById("weekly-overlay").classList.remove("open");
+}
+
+document.addEventListener('click', () => closeAllMenus());
+populateMenus();
+render();
+</script>
+
+</body>
+</html>
