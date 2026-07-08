@@ -48,8 +48,6 @@
   .filter-menu div:hover { background:var(--gray-100); color:var(--ink); }
   .filter-menu div.sel { color:var(--blue); font-weight:600; }
 
-  .avail { font-size:12.5px; color:var(--blue); display:flex; align-items:center; gap:6px; font-weight:500; }
-  .avail b { font-weight:700; }
   .topbar-right { display:flex; align-items:center; }
   .bell-wrap { position:relative; display:flex; align-items:center; margin-left:20px; cursor:pointer; }
   .bell-badge { position:absolute; top:-5px; right:-6px; background:var(--red); color:#fff; font-size:9.5px; font-weight:800; min-width:15px; height:15px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px; border:1.5px solid #fff; }
@@ -139,17 +137,7 @@
   .sla-secondary-link:hover { color:var(--gray-700); }
   .sla-flagged-note { font-size:11.5px; color:var(--amber-tx); font-weight:700; margin-top:4px; }
   .sla-persistent-flag { font-size:11.5px; color:var(--red); font-weight:700; margin-top:4px; }
-  .sla-advisory { font-size:11.5px; color:var(--amber-tx); font-weight:600; }
 
-  .reassign-menu { position:absolute; top:32px; left:0; width:190px; background:#fff; border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 22px rgba(20,20,30,0.16); z-index:15; display:none; overflow:hidden; }
-  .reassign-menu.open { display:block; }
-  .reassign-menu .rm-head { font-size:10.5px; font-weight:700; color:var(--gray-500); text-transform:uppercase; padding:9px 12px 5px; }
-  .reassign-menu div.rm-item { padding:8px 12px; font-size:12.5px; cursor:pointer; }
-  .reassign-menu div.rm-item:hover { background:var(--gray-100); }
-
-  .legend { margin-top:14px; display:flex; gap:18px; align-items:center; font-size:11.5px; color:var(--gray-500); flex-wrap:wrap; }
-  .legend-item { display:flex; align-items:center; gap:6px; }
-  .legend-dot { width:8px; height:8px; border-radius:50%; }
   .new-tag { display:inline-block; font-size:9.5px; font-weight:800; letter-spacing:.04em; color:var(--new-accent); background:var(--new-accent-bg); border:1px solid #BFE6D8; border-radius:5px; padding:1px 5px; margin-left:6px; vertical-align:middle; text-transform:uppercase; }
   .result-count { font-size:11.5px; color:var(--gray-500); margin:8px 2px 0; }
 
@@ -208,7 +196,6 @@
         </div>
       </div>
       <div class="topbar-right">
-        <div class="avail">Regular weekly availability: <b>Mon-Fri</b> ▾</div>
         <div class="pill" style="margin-right:14px;" onclick="event.stopPropagation(); openDigest()">✉ Preview daily digest</div>
         <div class="pill" style="margin-right:14px;" onclick="event.stopPropagation(); openWeekly()">📊 Preview weekly rollup</div>
         <div class="bell-wrap" onclick="toggleMenu(event,'notif-panel')">
@@ -285,7 +272,7 @@
             <th style="width:15%">Facility</th>
             <th style="width:13%" class="new-col">Owner <span class="new-tag">New</span></th>
             <th style="width:15%" class="new-col">SLA <span class="new-tag">New</span></th>
-            <th style="width:18%">Next Step</th>
+            <th style="width:18%"></th>
             <th style="width:10%">Stage</th>
             <th style="width:2%"></th>
           </tr>
@@ -554,7 +541,7 @@ function render() {
 }
 
 function closeAllMenus(except) {
-  document.querySelectorAll('.filter-menu.open, .notif-panel.open, .reassign-menu.open').forEach(el => {
+  document.querySelectorAll('.filter-menu.open, .notif-panel.open').forEach(el => {
     if (el.id !== except) el.classList.remove('open');
   });
 }
