@@ -123,12 +123,16 @@
   .sla-none .sla-text{ color:var(--gray-300); font-weight:500; }
   .sla-none .sla-sub{ display:none; }
   .sla-sub { font-size:10.5px; color:var(--gray-500); display:block; margin-top:1px; }
+  .instant-email-icon { cursor:pointer; margin-left:6px; opacity:0.55; font-size:12px; }
+  .instant-email-icon:hover { opacity:1; }
 
   .action-row { display:flex; flex-direction:row; align-items:center; gap:8px; }
   .sla-action-btn { display:inline-flex; align-items:center; gap:5px; background:var(--blue); color:#fff; font-size:11.5px; font-weight:700; padding:5px 11px; border-radius:7px; cursor:pointer; box-shadow:0 1px 2px rgba(74,108,247,0.35); position:relative; white-space:nowrap; }
   .sla-action-btn:hover { background:#3A5CE0; }
   .sla-action-btn.nudged { background:var(--gray-300); color:var(--gray-700); cursor:default; box-shadow:none; }
   .sla-action-btn.flag-btn { background:var(--amber-dot); color:#5C3D00; box-shadow:0 1px 2px rgba(240,164,0,0.35); }
+  .sla-action-btn.atrisk-nudge { background:var(--amber-dot); color:#5C3D00; box-shadow:0 1px 2px rgba(240,164,0,0.35); }
+  .sla-action-btn.atrisk-nudge:hover { background:#D89200; }
   .sla-action-btn.flag-btn:hover { background:#D89200; }
   .sla-autoflag-badge { font-size:11.5px; color:var(--amber-tx); font-weight:700; }
   .sla-secondary-link { font-size:11px; color:var(--gray-500); cursor:pointer; text-decoration:underline; display:inline-block; white-space:nowrap; }
@@ -159,6 +163,7 @@
   .digest-close:hover { color:var(--ink); }
   .digest-body { padding:6px 0; overflow-y:auto; }
   .digest-row { padding:11px 18px; border-bottom:1px solid var(--line); display:flex; gap:10px; align-items:flex-start; }
+  .digest-row-repeat { opacity:0.6; }
   .digest-row:last-child { border-bottom:none; }
   .digest-dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
   .digest-name { font-size:12.5px; font-weight:700; }
@@ -243,6 +248,19 @@
       </div>
     </div>
 
+    <div class="digest-overlay" id="instant-email-overlay" onclick="closeInstantEmail()">
+      <div class="digest-modal" onclick="event.stopPropagation()">
+        <div class="digest-head">
+          <div>
+            <div class="digest-title">Instant alert</div>
+            <div class="digest-sub">One individual email, sent the moment this breached — not batched, not the daily digest. This is what makes "same-day" actually true.</div>
+          </div>
+          <div class="digest-close" onclick="closeInstantEmail()">✕</div>
+        </div>
+        <div class="digest-body" id="instant-email-body"></div>
+      </div>
+    </div>
+
     <div class="cards" id="cards"></div>
 
     <div class="table-filters">
@@ -277,14 +295,6 @@
     </div>
     <div class="result-count" id="result-count"></div>
     <div class="result-count" style="margin-top:0;">Sorted by urgency — breached first</div>
-
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#28A745"></div> On track</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--amber-dot)"></div> At risk</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Breached (owner-side)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--wait-dot)"></div> Awaiting candidate</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--gray-300)"></div> Not yet tracked (pre-decision)</div>
-    </div>
   </div>
 </div>
 
@@ -321,13 +331,13 @@ const FLAG_ESCALATE_DAYS = 3;
 
 const CANDIDATES = [
   { id:1,  name:"Rose Amazan",          prof:"RN",  facility:"Carefam at Taunton",  stage:"orientation", sla:"ontrack", slaSub:"3d until SLA", note:"Pending orientation date", noteColor:"gray" },
-  { id:2,  name:"Kim Berger",           prof:"LPN", facility:"Carefam at Taunton",  stage:"paperwork",   sla:"atrisk",  slaSub:"70% of SLA elapsed" },
+  { id:2,  name:"Kim Berger",           prof:"LPN", facility:"Carefam at Taunton",  stage:"paperwork",   sla:"atrisk",  slaSub:"70% of SLA elapsed", newSinceLastDigest:true },
   { id:3,  name:"Kimberly Campanella",  prof:"RN",  facility:"Carefam at Sharon",   stage:"paperwork",   sla:"ontrack", slaSub:"5d until SLA" },
   { id:4,  name:"Dawn Cudmore",         prof:"LPN", facility:"Carefam at Taunton",  stage:"interviewing",sla:"breach",  slaSub:"Auto-escalated to you — no decision in 4 months" },
   { id:5,  name:"James Whitfield",      prof:"LPN", facility:"Carefam at Brockton", stage:"paperwork",   sla:"waiting", waitingDays:16, slaSub:"Candidate side — not owner SLA", note:"16d, no response — past normal cadence, worth a call", noteColor:"amber" },
   { id:6,  name:"Maria Alvarez",        prof:"CNA", facility:"Carefam at Sharon",   stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
   { id:7,  name:"Linda Okoro",          prof:"RN",  facility:"Carefam at Brockton", stage:"interviewing",sla:"none",    slaSub:"Not yet tracked" },
-  { id:8,  name:"Carlos Mendez",        prof:"HHA", facility:"Carefam at Meridian", stage:"paperwork",   sla:"atrisk",  slaSub:"65% of SLA elapsed" },
+  { id:8,  name:"Carlos Mendez",        prof:"HHA", facility:"Carefam at Meridian", stage:"paperwork",   sla:"atrisk",  slaSub:"65% of SLA elapsed", nudged:true },
   { id:9,  name:"Angela Fitzgerald",    prof:"LPN", facility:"Carefam at Wrentham", stage:"orientation", sla:"ontrack", slaSub:"1d until SLA", note:"Pending orientation date", noteColor:"gray" },
   { id:10, name:"Priya Nair",           prof:"RN",  facility:"Carefam at Taunton",  stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
   { id:11, name:"Robert Chen",          prof:"CNA", facility:"Carefam at Brockton", stage:"paperwork",   sla:"waiting", waitingDays:9,  slaSub:"Candidate side — not owner SLA", note:"No response to paperwork request, 9d", noteColor:"gray" },
@@ -458,8 +468,11 @@ function renderRows(list) {
         // Flagged but still within the first window: same amber tier as the
         // Flag button itself, distinguishing system-triggered from a
         // colleague's judgment call so trust in "Flagged" stays legible.
+        // Auto-flag is anchored to time since BREACH, not time since Nudge —
+        // it fires on its own even if nobody ever clicked Nudge, so the
+        // escalation ladder can't stall on a human action that may not happen.
         actionBtn = c.autoFlagged
-          ? `<div class="sla-autoflag-badge">Auto-flagged — no update after Nudge</div>`
+          ? `<div class="sla-autoflag-badge">Auto-flagged — unresolved 3d since breach</div>`
           : `<div class="sla-flagged-note">Flagged ✓</div>`;
       } else {
         // Severity ladder in color, not element type: blue Nudge (primary,
@@ -472,6 +485,19 @@ function renderRows(list) {
            <div class="sla-action-btn flag-btn" onclick="flagEscalation(${c.id})" title="Flag for manual escalation">Flag</div>
          </div>`;
       }
+    } else if (c.sla === "atrisk") {
+      // The metric "% of at-risk candidates actioned before breach" needs a
+      // real action to exist before breach — this closes that gap. Lighter
+      // than breach's Nudge: amber-toned (matches at-risk severity), no
+      // Flag option (too early to escalate that hard), same self-view
+      // suppression logic as breach.
+      if (isSelfView) {
+        actionBtn = "";
+      } else {
+        actionBtn = c.nudged
+          ? `<div class="sla-action-btn nudged">Nudge sent →</div>`
+          : `<div class="sla-action-btn atrisk-nudge" onclick="nudge(${c.id})">Nudge ${own.name} →</div>`;
+      }
     }
     return `
       <tr>
@@ -479,7 +505,7 @@ function renderRows(list) {
         <td class="sub">${c.prof}</td>
         <td><div class="fac-name">${c.facility}</div><div class="fac-type">${fac.type}</div></td>
         <td class="owner-cell"><span class="owner-role">${own.role}</span><span class="owner-name">${own.name}</span></td>
-        <td><div class="sla ${slaCls}" id="sla-${c.id}"><div class="sla-dot"></div><div><span class="sla-text">${slaLabel}</span><span class="sla-sub">${c.slaSub}</span></div></div></td>
+        <td><div class="sla ${slaCls}" id="sla-${c.id}"><div class="sla-dot"></div><div><span class="sla-text">${slaLabel}</span><span class="sla-sub">${c.slaSub}</span></div>${c.sla === "breach" && !isSelfView ? `<span class="instant-email-icon" onclick="event.stopPropagation(); openInstantEmail(${c.id})" title="Preview the instant alert email">✉</span>` : ""}</div></td>
         <td class="${c.noteColor==='red'?'note-red':c.noteColor==='amber'?'note-amber':'note-gray'}">${c.note ? c.note : actionBtn || "&nbsp;"}</td>
         <td><span class="badge ${stageMeta.cls}">${stageMeta.badge}</span></td>
         <td class="chev">›</td>
@@ -488,7 +514,10 @@ function renderRows(list) {
 }
 
 function renderNotifications() {
-  const flagged = CANDIDATES.filter(c => c.sla === "breach" || c.sla === "atrisk");
+  const isSelf = state.ownerView !== "All";
+  const flagged = CANDIDATES.filter(c =>
+    c.sla === "breach" && (state.ownerView === "All" || owner(c.facility, c.stage).name === state.ownerView)
+  );
   const badge = document.getElementById("bell-count");
   const label = document.getElementById("notif-count-label");
   const list = document.getElementById("notif-list");
@@ -500,14 +529,16 @@ function renderNotifications() {
   }
   badge.style.display = "flex";
   badge.textContent = flagged.length;
-  label.textContent = flagged.length + " need action";
+  label.textContent = isSelf ? flagged.length + " breached" : flagged.length + " need action";
   list.innerHTML = flagged.map(c => `
     <div class="notif-item">
-      <div class="notif-dot ${c.sla === 'breach' ? 'breach' : 'risk'}"></div>
+      <div class="notif-dot breach"></div>
       <div class="notif-body">
         <div class="notif-name">${c.name} — ${c.facility}</div>
-        <div class="notif-sub">${STAGE_META[c.stage].label} — ${c.nudged ? "Nudge sent" : c.slaSub}</div>
-        <div class="notif-action" onclick="${c.sla === 'breach' ? `nudge(${c.id})` : `resolveFromNotif(${c.id})`}">${c.sla === 'breach' ? (c.nudged ? 'Nudged ✓' : 'Nudge') : 'View candidate'}</div>
+        <div class="notif-sub">${STAGE_META[c.stage].label} — ${c.slaSub}</div>
+        ${isSelf
+          ? `<div class="notif-sub" style="font-style:italic;">Visible to your regional recruiter</div>`
+          : `<div class="notif-action" onclick="nudge(${c.id})">${c.nudged ? 'Nudged ✓' : 'Nudge'}</div>`}
       </div>
     </div>`).join("");
 }
@@ -552,11 +583,6 @@ function flagEscalation(id) {
   c.autoFlagged = false;
   render();
 }
-function resolveFromNotif(id) {
-  const c = CANDIDATES.find(c => c.id === id);
-  if (c.sla === "atrisk") { c.sla = "ontrack"; c.slaSub = "Reviewed"; }
-  render();
-}
 
 function openDigest() {
   const targetOwner = state.ownerView;
@@ -567,6 +593,8 @@ function openDigest() {
     const slaRows = CANDIDATES.filter(c =>
       (c.sla === "breach" || c.sla === "atrisk") && owner(c.facility, c.stage).name === targetOwner
     );
+    const newRows = slaRows.filter(c => c.newSinceLastDigest);
+    const repeatRows = slaRows.filter(c => !c.newSinceLastDigest);
     const advisoryRows = CANDIDATES.filter(c =>
       c.sla === "waiting" && c.waitingDays >= CANDIDATE_WAIT_ALERT_THRESHOLD && owner(c.facility, c.stage).name === targetOwner
     );
@@ -574,15 +602,21 @@ function openDigest() {
       body.innerHTML = `<div class="digest-empty">Nothing at or past the at-risk threshold for ${targetOwner} today.</div>`;
     } else {
       let html = "";
-      if (slaRows.length > 0) {
-        html += slaRows.map(c => `
-          <div class="digest-row">
+      const rowHtml = (c, repeat) => `
+          <div class="digest-row ${repeat ? 'digest-row-repeat' : ''}">
             <div class="digest-dot" style="background:${c.sla === 'breach' ? 'var(--red)' : 'var(--amber-dot)'}"></div>
             <div>
               <div class="digest-name">${c.name} — ${c.prof} — ${c.facility}</div>
-              <div class="digest-meta">${STAGE_META[c.stage].label} · ${c.slaSub}</div>
+              <div class="digest-meta">${STAGE_META[c.stage].label} · ${c.slaSub}${repeat ? " · no change since yesterday" : ""}</div>
             </div>
-          </div>`).join("");
+          </div>`;
+      if (newRows.length > 0) {
+        html += `<div class="digest-section-head">New today</div>`;
+        html += newRows.map(c => rowHtml(c, false)).join("");
+      }
+      if (repeatRows.length > 0) {
+        html += `<div class="digest-section-head">Still outstanding — no action needed to see this again</div>`;
+        html += repeatRows.map(c => rowHtml(c, true)).join("");
       }
       if (advisoryRows.length > 0) {
         html += `<div class="digest-section-head">Worth a call — candidate unresponsive</div>`;
@@ -641,6 +675,22 @@ function toggleWeeklyDrill() {
 }
 function closeWeekly() {
   document.getElementById("weekly-overlay").classList.remove("open");
+}
+
+function openInstantEmail(id) {
+  const c = CANDIDATES.find(c => c.id === id);
+  const own = owner(c.facility, c.stage);
+  const body = document.getElementById("instant-email-body");
+  body.innerHTML = `
+    <div class="weekly-row"><span class="weekly-metric">To</span><span class="weekly-count" style="font-size:12.5px;">${own.name}</span></div>
+    <div class="weekly-row"><span class="weekly-metric">Subject</span><span class="weekly-count" style="font-size:12.5px;">SLA breached — ${c.name} needs action</span></div>
+    <div class="weekly-row"><span class="weekly-metric">Sent</span><span class="weekly-count" style="font-size:12.5px;">Immediately at breach — not batched</span></div>
+    <div class="weekly-note">${c.name} (${c.prof}) at ${c.facility}, ${STAGE_META[c.stage].label} stage, has breached its SLA. ${c.slaSub}. This is the only channel guaranteed to reach ${own.name} today, whether or not they're currently in the platform.</div>
+  `;
+  document.getElementById("instant-email-overlay").classList.add("open");
+}
+function closeInstantEmail() {
+  document.getElementById("instant-email-overlay").classList.remove("open");
 }
 
 document.addEventListener('click', () => closeAllMenus());
