@@ -122,7 +122,6 @@
   .sla-breach .sla-text{ color:var(--red); }
   .sla-waiting .sla-text{ color:var(--wait-tx); }
   .sla-none .sla-text{ color:var(--gray-300); font-weight:500; }
-  .sla-none .sla-sub{ display:none; }
   .sla-sub { font-size:10.5px; color:var(--gray-500); display:block; margin-top:1px; }
   .instant-email-icon { cursor:pointer; margin-left:6px; opacity:0.55; font-size:12px; }
   .instant-email-icon:hover { opacity:1; }
@@ -326,26 +325,26 @@ const CANDIDATES = [
   { id:1,  name:"Rose Amazan",          prof:"RN",  facility:"Carefam at Taunton",  stage:"orientation", sla:"ontrack", slaSub:"3d until SLA", note:"Pending orientation date", noteColor:"gray" },
   { id:2,  name:"Kim Berger",           prof:"LPN", facility:"Carefam at Taunton",  stage:"paperwork",   sla:"atrisk",  slaSub:"70% of SLA elapsed", newSinceLastDigest:true },
   { id:3,  name:"Kimberly Campanella",  prof:"RN",  facility:"Carefam at Sharon",   stage:"paperwork",   sla:"ontrack", slaSub:"5d until SLA" },
-  { id:4,  name:"Dawn Cudmore",         prof:"LPN", facility:"Carefam at Taunton",  stage:"interviewing",sla:"breach",  slaSub:"no decision in 4 months" },
+  { id:4,  name:"Dawn Cudmore",         prof:"LPN", facility:"Carefam at Taunton",  stage:"interviewing",sla:"breach",  slaSub:"no update in 11d" },
   { id:5,  name:"James Whitfield",      prof:"LPN", facility:"Carefam at Brockton", stage:"paperwork",   sla:"waiting", waitingDays:16, slaSub:"Candidate side — not owner SLA", note:"16d, no response — past normal cadence, worth a call", noteColor:"amber" },
-  { id:6,  name:"Maria Alvarez",        prof:"CNA", facility:"Carefam at Sharon",   stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
+  { id:6,  name:"Maria Alvarez",        prof:"CNA", facility:"Carefam at Sharon",   stage:"request",     sla:"none",    slaSub:"" },
   { id:7,  name:"Linda Okoro",          prof:"RN",  facility:"Carefam at Brockton", stage:"interviewing",sla:"ontrack", slaSub:"4d until SLA" },
   { id:8,  name:"Carlos Mendez",        prof:"HHA", facility:"Carefam at Meridian", stage:"paperwork",   sla:"atrisk",  slaSub:"65% of SLA elapsed", nudged:true },
   { id:9,  name:"Angela Fitzgerald",    prof:"LPN", facility:"Carefam at Wrentham", stage:"orientation", sla:"ontrack", slaSub:"1d until SLA", note:"Pending orientation date", noteColor:"gray" },
-  { id:10, name:"Priya Nair",           prof:"RN",  facility:"Carefam at Taunton",  stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
+  { id:10, name:"Priya Nair",           prof:"RN",  facility:"Carefam at Taunton",  stage:"request",     sla:"none",    slaSub:"" },
   { id:11, name:"Robert Chen",          prof:"CNA", facility:"Carefam at Brockton", stage:"paperwork",   sla:"waiting", waitingDays:9,  slaSub:"Candidate side — not owner SLA", note:"No response to paperwork request, 9d", noteColor:"gray" },
   { id:12, name:"Sandra Wolcott",       prof:"LPN", facility:"Carefam at Sharon",   stage:"interviewing",sla:"atrisk",  slaSub:"72% of SLA elapsed" },
-  { id:13, name:"Devon Marsh",          prof:"HHA", facility:"Carefam at Meridian", stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
+  { id:13, name:"Devon Marsh",          prof:"HHA", facility:"Carefam at Meridian", stage:"request",     sla:"none",    slaSub:"" },
   { id:14, name:"Fatima Haidari",       prof:"RN",  facility:"Carefam at Wrentham", stage:"paperwork",   sla:"ontrack", slaSub:"6d until SLA" },
   { id:15, name:"Thomas Nguyen",        prof:"CNA", facility:"Carefam at Taunton",  stage:"interviewing",sla:"none",    slaSub:"Interview scheduled, not yet completed" },
-  { id:16, name:"Rachel Odom",          prof:"LPN", facility:"Carefam at Brockton", stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
+  { id:16, name:"Rachel Odom",          prof:"LPN", facility:"Carefam at Brockton", stage:"request",     sla:"none",    slaSub:"" },
   { id:17, name:"Miguel Santos",        prof:"HHA", facility:"Carefam at Meridian", stage:"orientation", sla:"atrisk",  slaSub:"80% of SLA elapsed", note:"Pending orientation date", noteColor:"gray" },
-  { id:18, name:"Grace Kimani",         prof:"RN",  facility:"Carefam at Sharon",   stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
+  { id:18, name:"Grace Kimani",         prof:"RN",  facility:"Carefam at Sharon",   stage:"request",     sla:"none",    slaSub:"" },
   { id:19, name:"Daniel Feld",          prof:"CNA", facility:"Carefam at Wrentham", stage:"interviewing",sla:"ontrack", slaSub:"6d until SLA" },
-  { id:20, name:"Yolanda Reyes",        prof:"LPN", facility:"Carefam at Taunton",  stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
-  { id:21, name:"Elena Cruz",           prof:"LPN", facility:"Carefam at Wrentham", stage:"paperwork",   sla:"breach",  slaSub:"" },
-  { id:22, name:"Patricia Woods",       prof:"HHA", facility:"Carefam at Meridian", stage:"paperwork",   sla:"breach",  slaSub:"", nudged:true, flagged:true, flaggedDaysAgo:5 },
-  { id:23, name:"Marcus Bellamy",       prof:"RN",  facility:"Carefam at Taunton",  stage:"orientation", sla:"breach",  slaSub:"orientation date not yet set", nudged:true, flagged:true, flaggedDaysAgo:1, autoFlagged:true }
+  { id:20, name:"Yolanda Reyes",        prof:"LPN", facility:"Carefam at Taunton",  stage:"request",     sla:"none",    slaSub:"" },
+  { id:21, name:"Elena Cruz",           prof:"LPN", facility:"Carefam at Wrentham", stage:"paperwork",   sla:"breach",  slaSub:"no update in 7d" },
+  { id:22, name:"Patricia Woods",       prof:"HHA", facility:"Carefam at Meridian", stage:"paperwork",   sla:"breach",  slaSub:"no update in 9d", nudged:true, flagged:true, flaggedDaysAgo:5 },
+  { id:23, name:"Marcus Bellamy",       prof:"RN",  facility:"Carefam at Taunton",  stage:"orientation", sla:"breach",  slaSub:"no update in 4d", nudged:true, flagged:true, flaggedDaysAgo:1, autoFlagged:true }
 ];
 
 const STAGE_META = {
@@ -372,7 +371,7 @@ function populateMenus() {
     `<div class="${state.ownerView===o?'sel':''}" onclick="setFilter('ownerView','${o}')">${o === "All" ? "Regional Recruiter (all)" : o}</div>`).join("");
   const statuses = [
     ["All", "All"], ["breach", "Breached"], ["atrisk", "At risk"],
-    ["waiting", "Awaiting candidate"], ["ontrack", "On track"], ["none", "Not yet tracked"],
+    ["waiting", "Awaiting candidate"], ["ontrack", "On track"], ["none", "Pending interview"],
   ];
   document.getElementById("menu-status").innerHTML = statuses.map(([key, label]) =>
     `<div class="${state.status===key?'sel':''}" onclick="setFilter('status','${key}','${label}')">${label}</div>`).join("");
@@ -488,7 +487,7 @@ function renderRows(list) {
     const own = owner(c.facility, c.stage);
     const fac = FACILITIES[c.facility];
     const slaCls = "sla-" + c.sla;
-    const slaLabel = c.sla === "none" ? "Not tracked" : c.sla === "ontrack" ? "On track" : c.sla === "atrisk" ? "At risk" : c.sla === "waiting" ? "Awaiting candidate" : "Breached";
+    const slaLabel = c.sla === "none" ? "Pending interview" : c.sla === "ontrack" ? "On track" : c.sla === "atrisk" ? "At risk" : c.sla === "waiting" ? "Awaiting candidate" : "Breached";
     let actionBtn = "";
     const isSelfView = state.ownerView !== "All" && state.ownerView === own.name;
     if (c.sla === "breach") {
@@ -496,21 +495,24 @@ function renderRows(list) {
         // Nudge/Flag target the owner from someone else's perspective
         // (regional, or the system). When the owner is looking at their own
         // queue, "Nudge yourself" is meaningless — show status only.
-        actionBtn = `<div class="note-red" style="font-weight:600;">Flagged — visible to your regional recruiter</div>`;
-      } else if (c.flaggedDaysAgo >= FLAG_ESCALATE_DAYS) {
-        // Past the second threshold regardless of how it got flagged —
-        // urgency dominates provenance at this point.
-        actionBtn = `<div class="sla-persistent-flag">Unresolved · ${c.flaggedDaysAgo}d</div>`;
+        // The label itself must match what actually happened: "Flagged" is
+        // a specific claim (a person or the 3-day auto-flag acted on this),
+        // and it's false for a candidate that's merely breached with no
+        // Nudge, Flag, or auto-flag on record yet.
+        const selfLabel = c.flagged ? "Flagged" : "Breached";
+        actionBtn = `<div class="note-red" style="font-weight:600;">${selfLabel} — visible to your regional recruiter</div>`;
       } else if (c.flagged) {
-        // Flagged but still within the first window: same amber tier as the
-        // Flag button itself, distinguishing system-triggered from a
-        // colleague's judgment call so trust in "Flagged" stays legible.
         // Auto-flag is anchored to time since BREACH, not time since Nudge —
         // it fires on its own even if nobody ever clicked Nudge, so the
         // escalation ladder can't stall on a human action that may not happen.
-        actionBtn = c.autoFlagged
-          ? `<div class="sla-autoflag-badge">Auto-flagged at 3d — ${c.flaggedDaysAgo}d since</div>`
-          : `<div class="sla-flagged-note">Flagged ✓</div>`;
+        // Provenance (auto vs. manual) stays visible at every day count now —
+        // collapsing it into generic "Unresolved" past day 3 hid which path
+        // a candidate took to get here, which is exactly the kind of thing
+        // worth being able to answer if asked.
+        const severe = c.flaggedDaysAgo >= FLAG_ESCALATE_DAYS;
+        const cls = severe ? "sla-persistent-flag" : (c.autoFlagged ? "sla-autoflag-badge" : "sla-flagged-note");
+        const label = c.autoFlagged ? "Auto-flagged at 3d" : "Flagged";
+        actionBtn = `<div class="${cls}">${label} — ${c.flaggedDaysAgo}d since${severe ? ", unresolved" : ""}</div>`;
       } else {
         // Severity ladder in color, not element type: blue Nudge (primary,
         // first response), amber Flag (real button, not a text link — a
@@ -529,7 +531,11 @@ function renderRows(list) {
       // Flag option (too early to escalate that hard), same self-view
       // suppression logic as breach.
       if (isSelfView) {
-        actionBtn = `<div class="note-amber" style="font-weight:600;">Approaching SLA — no action logged yet</div>`;
+        // Same accuracy fix as the breach branch above: don't claim "no
+        // action logged" for a candidate who was, in fact, already nudged.
+        actionBtn = c.nudged
+          ? `<div class="note-amber" style="font-weight:600;">Approaching SLA — nudge received</div>`
+          : `<div class="note-amber" style="font-weight:600;">Approaching SLA — no action logged yet</div>`;
       } else {
         actionBtn = c.nudged
           ? `<div class="sla-action-btn nudged">Nudge sent →</div>`
@@ -543,7 +549,7 @@ function renderRows(list) {
         <td><div class="fac-name">${c.facility}</div><div class="fac-type">${fac.type}</div></td>
         <td class="owner-cell"><span class="owner-role">${own.role}</span><span class="owner-name">${own.name}</span></td>
         <td><div class="sla ${slaCls}" id="sla-${c.id}"><div class="sla-dot"></div><div><span class="sla-text">${slaLabel}</span><span class="sla-sub">${c.sla === "breach" ? alertText(c, own, isSelfView) : c.slaSub}</span></div>${c.sla === "breach" && !isSelfView ? `<span class="instant-email-icon" onclick="event.stopPropagation(); openInstantEmail(${c.id})" title="Preview the instant alert email">✉</span>` : ""}</div></td>
-        <td class="${c.noteColor==='red'?'note-red':c.noteColor==='amber'?'note-amber':'note-gray'}">${c.note ? c.note : actionBtn || "&nbsp;"}</td>
+        <td class="${c.noteColor==='red'?'note-red':c.noteColor==='amber'?'note-amber':'note-gray'}">${(c.note && c.sla !== "atrisk" && c.sla !== "breach") ? c.note : actionBtn || "&nbsp;"}</td>
         <td><span class="badge ${stageMeta.cls}">${stageMeta.badge}</span></td>
         <td class="chev">›</td>
       </tr>`;
@@ -656,7 +662,7 @@ function openDigest() {
             <div class="digest-dot" style="background:${c.sla === 'breach' ? 'var(--red)' : 'var(--amber-dot)'}"></div>
             <div>
               <div class="digest-name">${c.name} — ${c.prof} — ${c.facility}</div>
-              <div class="digest-meta">${STAGE_META[c.stage].label} · ${c.sla === "breach" ? alertText(c, owner(c.facility, c.stage), true) : c.slaSub}${repeat ? " · no change since yesterday" : ""}</div>
+              <div class="digest-meta">${STAGE_META[c.stage].label} · ${c.sla === "breach" ? alertText(c, owner(c.facility, c.stage), true) : c.slaSub}</div>
             </div>
           </div>`;
       if (newRows.length > 0) {
@@ -664,7 +670,7 @@ function openDigest() {
         html += newRows.map(c => rowHtml(c, false)).join("");
       }
       if (repeatRows.length > 0) {
-        html += `<div class="digest-section-head">Still outstanding — no action needed to see this again</div>`;
+        html += `<div class="digest-section-head">Still outstanding — unchanged since yesterday</div>`;
         html += repeatRows.map(c => rowHtml(c, true)).join("");
       }
       if (advisoryRows.length > 0) {
