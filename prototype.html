@@ -159,6 +159,9 @@
   .digest-empty { padding:26px 18px; text-align:center; font-size:12px; color:var(--gray-500); }
   .digest-section-head { padding:10px 18px 4px; font-size:10.5px; font-weight:700; color:var(--gray-500); text-transform:uppercase; }
   .weekly-row { padding:12px 18px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+  .trend-good { color:#1E7A34; font-size:10.5px; font-weight:700; margin-left:8px; }
+  .trend-bad { color:var(--red); font-size:10.5px; font-weight:700; margin-left:8px; }
+  .trend-flat { color:var(--gray-500); font-size:10.5px; font-weight:500; margin-left:8px; }
   .weekly-row:last-child { border-bottom:none; }
   .weekly-metric { font-size:12.5px; color:var(--ink); }
   .weekly-count { font-size:15px; font-weight:700; color:var(--ink); }
@@ -625,6 +628,22 @@ function closeDigest() {
   document.getElementById("digest-overlay").classList.remove("open");
 }
 
+// Illustrative only: a real build persists each week's five counts (the
+// same counts already rendered below) and diffs against last week's stored
+// row — no new pipeline, just saving a number the system already computes.
+// This demo has no history to diff against, so last week is hardcoded here
+// to show what the comparison would look like once that exists.
+const LAST_WEEK = { breach: 6, atrisk: 3, waiting: 2, ontrack: 5, flagsOpen: 2 };
+
+function trendBadge(curr, prev, goodDirection) {
+  const diff = curr - prev;
+  if (diff === 0) return `<span class="trend-flat">— flat vs last week</span>`;
+  const rose = diff > 0;
+  const isGood = goodDirection === "up" ? rose : !rose;
+  const arrow = rose ? "▲" : "▼";
+  return `<span class="${isGood ? 'trend-good' : 'trend-bad'}">${arrow} ${Math.abs(diff)} vs last week</span>`;
+}
+
 function openWeekly() {
   const body = document.getElementById("weekly-body");
   const counts = {
@@ -635,13 +654,13 @@ function openWeekly() {
   };
   const unresolvedFlags = CANDIDATES.filter(c => c.flagged && c.flaggedDaysAgo >= FLAG_ESCALATE_DAYS);
   body.innerHTML = `
-    <div class="weekly-row"><span class="weekly-metric">Breached (owner-side)</span><span class="weekly-count">${counts.breach}</span></div>
-    <div class="weekly-row"><span class="weekly-metric">At risk</span><span class="weekly-count">${counts.atrisk}</span></div>
-    <div class="weekly-row"><span class="weekly-metric">Awaiting candidate</span><span class="weekly-count">${counts.waiting}</span></div>
-    <div class="weekly-row"><span class="weekly-metric">On track</span><span class="weekly-count">${counts.ontrack}</span></div>
+    <div class="weekly-row"><span class="weekly-metric">Breached (owner-side)</span><span><span class="weekly-count">${counts.breach}</span>${trendBadge(counts.breach, LAST_WEEK.breach, "down")}</span></div>
+    <div class="weekly-row"><span class="weekly-metric">At risk</span><span><span class="weekly-count">${counts.atrisk}</span>${trendBadge(counts.atrisk, LAST_WEEK.atrisk, "down")}</span></div>
+    <div class="weekly-row"><span class="weekly-metric">Awaiting candidate</span><span><span class="weekly-count">${counts.waiting}</span>${trendBadge(counts.waiting, LAST_WEEK.waiting, "down")}</span></div>
+    <div class="weekly-row"><span class="weekly-metric">On track</span><span><span class="weekly-count">${counts.ontrack}</span>${trendBadge(counts.ontrack, LAST_WEEK.ontrack, "up")}</span></div>
     <div class="weekly-row weekly-drill" id="weekly-drill-toggle" onclick="toggleWeeklyDrill()">
       <span class="weekly-metric">Flags open &gt; 3 days, unresolved <span class="weekly-drill-hint">(click for names)</span></span>
-      <span class="weekly-count flag-count">${unresolvedFlags.length}</span>
+      <span><span class="weekly-count flag-count">${unresolvedFlags.length}</span>${trendBadge(unresolvedFlags.length, LAST_WEEK.flagsOpen, "down")}</span>
     </div>
     <div class="weekly-drill-list" id="weekly-drill-list" style="display:none;">
       ${unresolvedFlags.length === 0
@@ -652,7 +671,7 @@ function openWeekly() {
               <span class="weekly-drill-meta">${c.facility} · ${owner(c.facility, c.stage).name} · ${c.flaggedDaysAgo}d unresolved</span>
             </div>`).join("")}
     </div>
-    <div class="weekly-note">This is the one exception to "no candidate names" — everything above stays aggregate on purpose, but a flag unresolved this long is a small enough set that naming it is the point, not a to-do-list risk. (Trend vs. last week needs historical data this demo doesn't have; shown here as a single current snapshot.)</div>
+    <div class="weekly-note">This is the one exception to "no candidate names" — everything above stays aggregate on purpose, but a flag unresolved this long is a small enough set that naming it is the point, not a to-do-list risk. (Last week's numbers here are illustrative — production persists this same weekly snapshot and diffs against it; no new pipeline needed.)</div>
   `;
   document.getElementById("weekly-overlay").classList.add("open");
 }
