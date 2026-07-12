@@ -459,7 +459,7 @@ function renderRows(list) {
         // it fires on its own even if nobody ever clicked Nudge, so the
         // escalation ladder can't stall on a human action that may not happen.
         actionBtn = c.autoFlagged
-          ? `<div class="sla-autoflag-badge">Auto-flagged — unresolved 3d since breach</div>`
+          ? `<div class="sla-autoflag-badge">Auto-flagged at 3d — ${c.flaggedDaysAgo}d since</div>`
           : `<div class="sla-flagged-note">Flagged ✓</div>`;
       } else {
         // Severity ladder in color, not element type: blue Nudge (primary,
