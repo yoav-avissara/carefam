@@ -100,7 +100,10 @@
   .note-red { color:var(--red); font-size:11.5px; font-weight:500; }
   .note-amber { color:var(--amber-tx); font-size:11.5px; font-weight:600; }
   .note-gray { color:var(--gray-500); font-size:11.5px; }
-  .chev { color:var(--gray-300); font-size:14px; }
+  .chev { color:var(--gray-500); font-size:16px; font-weight:700; }
+  th.sortable { cursor:pointer; user-select:none; }
+  th.sortable:hover { color:var(--ink); }
+  .sort-arrow { display:inline-block; margin-left:4px; font-size:10px; color:var(--gray-700); }
 
   .owner-cell { font-size:12.5px; }
   .owner-role { color:var(--gray-500); font-size:10.5px; text-transform:uppercase; letter-spacing:.02em; display:block; margin-bottom:1px;}
@@ -260,7 +263,7 @@
       <div class="pill" id="fac-pill" onclick="toggleMenu(event,'menu-fac')">Facility: <b id="fac-val">All</b> ▾
         <div class="filter-menu" id="menu-fac" onclick="event.stopPropagation()"></div>
       </div>
-      <div class="pill" id="status-pill" onclick="toggleMenu(event,'menu-status')">Status: <b id="status-val">All</b> ▾
+      <div class="pill" id="status-pill" onclick="toggleMenu(event,'menu-status')">SLA: <b id="status-val">All</b> ▾
         <div class="filter-menu" id="menu-status" onclick="event.stopPropagation()"></div>
       </div>
       <div class="clear-filters-link" id="clear-filters-link" onclick="clearAllFilters()" style="display:none;">Clear filters ✕</div>
@@ -270,13 +273,13 @@
       <table>
         <thead>
           <tr>
-            <th style="width:17%">Name</th>
-            <th style="width:8%">Profession</th>
-            <th style="width:15%">Facility</th>
-            <th style="width:13%" class="new-col">Owner <span class="new-tag">New</span></th>
-            <th style="width:15%" class="new-col">SLA <span class="new-tag">New</span></th>
+            <th style="width:17%" class="sortable" onclick="setSort('name')">Name<span class="sort-arrow" id="sort-name"></span></th>
+            <th style="width:8%" class="sortable" onclick="setSort('prof')">Profession<span class="sort-arrow" id="sort-prof"></span></th>
+            <th style="width:15%" class="sortable" onclick="setSort('facility')">Facility<span class="sort-arrow" id="sort-facility"></span></th>
+            <th style="width:13%" class="new-col sortable" onclick="setSort('owner')">Owner <span class="new-tag">New</span><span class="sort-arrow" id="sort-owner"></span></th>
+            <th style="width:15%" class="new-col sortable" onclick="setSort('sla')">SLA <span class="new-tag">New</span><span class="sort-arrow" id="sort-sla"></span></th>
             <th style="width:18%"></th>
-            <th style="width:10%">Stage</th>
+            <th style="width:10%" class="sortable" onclick="setSort('stage')">Status<span class="sort-arrow" id="sort-stage"></span></th>
             <th style="width:2%"></th>
           </tr>
         </thead>
@@ -284,7 +287,7 @@
       </table>
     </div>
     <div class="result-count" id="result-count"></div>
-    <div class="result-count" style="margin-top:0;">Sorted by urgency — breached first</div>
+    <div class="result-count" style="margin-top:0;" id="sort-caption">Sorted by urgency — breached first</div>
   </div>
 </div>
 
@@ -323,7 +326,7 @@ const CANDIDATES = [
   { id:1,  name:"Rose Amazan",          prof:"RN",  facility:"Carefam at Taunton",  stage:"orientation", sla:"ontrack", slaSub:"3d until SLA", note:"Pending orientation date", noteColor:"gray" },
   { id:2,  name:"Kim Berger",           prof:"LPN", facility:"Carefam at Taunton",  stage:"paperwork",   sla:"atrisk",  slaSub:"70% of SLA elapsed", newSinceLastDigest:true },
   { id:3,  name:"Kimberly Campanella",  prof:"RN",  facility:"Carefam at Sharon",   stage:"paperwork",   sla:"ontrack", slaSub:"5d until SLA" },
-  { id:4,  name:"Dawn Cudmore",         prof:"LPN", facility:"Carefam at Taunton",  stage:"interviewing",sla:"breach",  slaSub:"Auto-escalated to you — no decision in 4 months" },
+  { id:4,  name:"Dawn Cudmore",         prof:"LPN", facility:"Carefam at Taunton",  stage:"interviewing",sla:"breach",  slaSub:"no decision in 4 months" },
   { id:5,  name:"James Whitfield",      prof:"LPN", facility:"Carefam at Brockton", stage:"paperwork",   sla:"waiting", waitingDays:16, slaSub:"Candidate side — not owner SLA", note:"16d, no response — past normal cadence, worth a call", noteColor:"amber" },
   { id:6,  name:"Maria Alvarez",        prof:"CNA", facility:"Carefam at Sharon",   stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
   { id:7,  name:"Linda Okoro",          prof:"RN",  facility:"Carefam at Brockton", stage:"interviewing",sla:"ontrack", slaSub:"4d until SLA" },
@@ -340,9 +343,9 @@ const CANDIDATES = [
   { id:18, name:"Grace Kimani",         prof:"RN",  facility:"Carefam at Sharon",   stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
   { id:19, name:"Daniel Feld",          prof:"CNA", facility:"Carefam at Wrentham", stage:"interviewing",sla:"ontrack", slaSub:"6d until SLA" },
   { id:20, name:"Yolanda Reyes",        prof:"LPN", facility:"Carefam at Taunton",  stage:"request",     sla:"none",    slaSub:"Not yet tracked" },
-  { id:21, name:"Elena Cruz",           prof:"LPN", facility:"Carefam at Wrentham", stage:"paperwork",   sla:"breach",  slaSub:"Auto-escalated to you" },
-  { id:22, name:"Patricia Woods",       prof:"HHA", facility:"Carefam at Meridian", stage:"paperwork",   sla:"breach",  slaSub:"Auto-escalated to you", nudged:true, flagged:true, flaggedDaysAgo:5 },
-  { id:23, name:"Marcus Bellamy",       prof:"RN",  facility:"Carefam at Taunton",  stage:"orientation", sla:"breach",  slaSub:"Auto-escalated to you — orientation date not yet set", nudged:true, flagged:true, flaggedDaysAgo:1, autoFlagged:true }
+  { id:21, name:"Elena Cruz",           prof:"LPN", facility:"Carefam at Wrentham", stage:"paperwork",   sla:"breach",  slaSub:"" },
+  { id:22, name:"Patricia Woods",       prof:"HHA", facility:"Carefam at Meridian", stage:"paperwork",   sla:"breach",  slaSub:"", nudged:true, flagged:true, flaggedDaysAgo:5 },
+  { id:23, name:"Marcus Bellamy",       prof:"RN",  facility:"Carefam at Taunton",  stage:"orientation", sla:"breach",  slaSub:"orientation date not yet set", nudged:true, flagged:true, flaggedDaysAgo:1, autoFlagged:true }
 ];
 
 const STAGE_META = {
@@ -354,7 +357,8 @@ const STAGE_META = {
 
 function initials(name) { return name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
 
-let state = { prof:"All", fac:"All", ownerView:"All", stage:"All", status:"All" };
+let state = { prof:"All", fac:"All", ownerView:"All", stage:"All", status:"All", sortKey:null, sortDir:"asc" };
+const STAGE_ORDER = ["request", "interviewing", "paperwork", "orientation"];
 
 function populateMenus() {
   const profs = ["All", ...Array.from(new Set(CANDIDATES.map(c=>c.prof)))];
@@ -394,10 +398,41 @@ function baseFiltered() {
 }
 
 function filtered() {
-  return baseFiltered().filter(c =>
+  const rows = baseFiltered().filter(c =>
     (state.stage === "All" || c.stage === state.stage) &&
     (state.status === "All" || c.sla === state.status)
-  ).sort((a, b) => SLA_PRIORITY[a.sla] - SLA_PRIORITY[b.sla]);
+  );
+  if (!state.sortKey) {
+    return rows.sort((a, b) => SLA_PRIORITY[a.sla] - SLA_PRIORITY[b.sla]);
+  }
+  const dir = state.sortDir === "asc" ? 1 : -1;
+  return rows.sort((a, b) => {
+    let av, bv;
+    if (state.sortKey === "stage") {
+      av = STAGE_ORDER.indexOf(a.stage); bv = STAGE_ORDER.indexOf(b.stage);
+    } else if (state.sortKey === "facility") {
+      av = a.facility; bv = b.facility;
+    } else if (state.sortKey === "owner") {
+      av = owner(a.facility, a.stage).name; bv = owner(b.facility, b.stage).name;
+    } else if (state.sortKey === "sla") {
+      av = SLA_PRIORITY[a.sla]; bv = SLA_PRIORITY[b.sla];
+    } else {
+      av = a[state.sortKey]; bv = b[state.sortKey];
+    }
+    if (av < bv) return -1 * dir;
+    if (av > bv) return 1 * dir;
+    return 0;
+  });
+}
+
+function setSort(key) {
+  if (state.sortKey === key) {
+    state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+  } else {
+    state.sortKey = key;
+    state.sortDir = "asc";
+  }
+  render();
 }
 
 function toggleStageFilter(stage) {
@@ -406,7 +441,7 @@ function toggleStageFilter(stage) {
 }
 
 function clearAllFilters() {
-  state = { prof:"All", fac:"All", ownerView:"All", stage:"All", status:"All" };
+  state = { prof:"All", fac:"All", ownerView:"All", stage:"All", status:"All", sortKey:null, sortDir:"asc" };
   document.getElementById("prof-val").textContent = "All";
   document.getElementById("fac-val").textContent = "All";
   document.getElementById("owner-val").textContent = "Regional Recruiter";
@@ -433,6 +468,18 @@ function renderCards() {
     <div class="card ${state.stage === key ? 'card-active' : ''}" onclick="toggleStageFilter('${key}')">
       <span class="num">${counts[key]}</span><span class="lbl">${label}</span>
     </div>`).join("");
+}
+
+// Named "alert", not "escalate" — "escalate/escalation" already means one
+// specific thing in this product: a deliberate step (Flag) or the ladder
+// concept itself. This event is neither — it's the automatic instant email
+// firing at breach, before any human or the 3-day auto-flag has done
+// anything. Reusing "escalated" for it made two unrelated things sound like
+// the same mechanism. "Instant alert" matches the term already used for
+// this exact channel elsewhere (the envelope icon, the email modal title).
+function alertText(c, own, toOwner) {
+  const detail = c.slaSub ? " — " + c.slaSub : "";
+  return "Instant alert sent to " + (toOwner ? "you" : own.name) + detail;
 }
 
 function renderRows(list) {
@@ -482,7 +529,7 @@ function renderRows(list) {
       // Flag option (too early to escalate that hard), same self-view
       // suppression logic as breach.
       if (isSelfView) {
-        actionBtn = "";
+        actionBtn = `<div class="note-amber" style="font-weight:600;">Approaching SLA — no action logged yet</div>`;
       } else {
         actionBtn = c.nudged
           ? `<div class="sla-action-btn nudged">Nudge sent →</div>`
@@ -495,7 +542,7 @@ function renderRows(list) {
         <td class="sub">${c.prof}</td>
         <td><div class="fac-name">${c.facility}</div><div class="fac-type">${fac.type}</div></td>
         <td class="owner-cell"><span class="owner-role">${own.role}</span><span class="owner-name">${own.name}</span></td>
-        <td><div class="sla ${slaCls}" id="sla-${c.id}"><div class="sla-dot"></div><div><span class="sla-text">${slaLabel}</span><span class="sla-sub">${c.slaSub}</span></div>${c.sla === "breach" && !isSelfView ? `<span class="instant-email-icon" onclick="event.stopPropagation(); openInstantEmail(${c.id})" title="Preview the instant alert email">✉</span>` : ""}</div></td>
+        <td><div class="sla ${slaCls}" id="sla-${c.id}"><div class="sla-dot"></div><div><span class="sla-text">${slaLabel}</span><span class="sla-sub">${c.sla === "breach" ? alertText(c, own, isSelfView) : c.slaSub}</span></div>${c.sla === "breach" && !isSelfView ? `<span class="instant-email-icon" onclick="event.stopPropagation(); openInstantEmail(${c.id})" title="Preview the instant alert email">✉</span>` : ""}</div></td>
         <td class="${c.noteColor==='red'?'note-red':c.noteColor==='amber'?'note-amber':'note-gray'}">${c.note ? c.note : actionBtn || "&nbsp;"}</td>
         <td><span class="badge ${stageMeta.cls}">${stageMeta.badge}</span></td>
         <td class="chev">›</td>
@@ -525,7 +572,7 @@ function renderNotifications() {
       <div class="notif-dot breach"></div>
       <div class="notif-body">
         <div class="notif-name">${c.name} — ${c.facility}</div>
-        <div class="notif-sub">${STAGE_META[c.stage].label} — ${c.slaSub}</div>
+        <div class="notif-sub">${STAGE_META[c.stage].label} — ${alertText(c, owner(c.facility, c.stage), isSelf)}</div>
         ${isSelf
           ? `<div class="notif-sub" style="font-style:italic;">Visible to your regional recruiter</div>`
           : `<div class="notif-action" onclick="nudge(${c.id})">${c.nudged ? 'Nudged ✓' : 'Nudge'}</div>`}
@@ -541,6 +588,18 @@ function render() {
   document.getElementById("result-count").textContent = list.length + " of " + CANDIDATES.length + " candidates shown";
   const anyActive = state.prof !== "All" || state.fac !== "All" || state.ownerView !== "All" || state.stage !== "All" || state.status !== "All";
   document.getElementById("clear-filters-link").style.display = anyActive ? "flex" : "none";
+
+  const labels = { name:"Name", prof:"Profession", facility:"Facility", stage:"Status", owner:"Owner", sla:"SLA urgency" };
+  ["name","prof","facility","stage","owner","sla"].forEach(k => {
+    document.getElementById("sort-" + k).textContent = "";
+  });
+  const caption = document.getElementById("sort-caption");
+  if (!state.sortKey) {
+    caption.textContent = "Sorted by urgency — breached first";
+  } else {
+    document.getElementById("sort-" + state.sortKey).textContent = state.sortDir === "asc" ? "▲" : "▼";
+    caption.textContent = "Sorted by " + labels[state.sortKey] + " (" + (state.sortDir === "asc" ? (state.sortKey === "sla" ? "most urgent first" : "A→Z") : (state.sortKey === "sla" ? "least urgent first" : "Z→A")) + ") — click again to reverse, or click any column header to change";
+  }
 }
 
 function closeAllMenus(except) {
@@ -597,7 +656,7 @@ function openDigest() {
             <div class="digest-dot" style="background:${c.sla === 'breach' ? 'var(--red)' : 'var(--amber-dot)'}"></div>
             <div>
               <div class="digest-name">${c.name} — ${c.prof} — ${c.facility}</div>
-              <div class="digest-meta">${STAGE_META[c.stage].label} · ${c.slaSub}${repeat ? " · no change since yesterday" : ""}</div>
+              <div class="digest-meta">${STAGE_META[c.stage].label} · ${c.sla === "breach" ? alertText(c, owner(c.facility, c.stage), true) : c.slaSub}${repeat ? " · no change since yesterday" : ""}</div>
             </div>
           </div>`;
       if (newRows.length > 0) {
@@ -691,7 +750,7 @@ function openInstantEmail(id) {
     <div class="weekly-row"><span class="weekly-metric">To</span><span class="weekly-count" style="font-size:12.5px;">${own.name}</span></div>
     <div class="weekly-row"><span class="weekly-metric">Subject</span><span class="weekly-count" style="font-size:12.5px;">SLA breached — ${c.name} needs action</span></div>
     <div class="weekly-row"><span class="weekly-metric">Sent</span><span class="weekly-count" style="font-size:12.5px;">Immediately at breach — not batched</span></div>
-    <div class="weekly-note">${c.name} (${c.prof}) at ${c.facility}, ${STAGE_META[c.stage].label} stage, has breached its SLA. ${c.slaSub}. This is the only channel guaranteed to reach ${own.name} today, whether or not they're currently in the platform.</div>
+    <div class="weekly-note">${c.name} (${c.prof}) at ${c.facility}, ${STAGE_META[c.stage].label} stage, has breached its SLA. ${alertText(c, own, true)}. This is the only channel guaranteed to reach you today, whether or not you're currently in the platform.</div>
   `;
   document.getElementById("instant-email-overlay").classList.add("open");
 }
