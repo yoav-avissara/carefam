@@ -82,6 +82,8 @@
   thead th { text-align:left; font-weight:600; color:var(--gray-500); font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; padding:10px 14px; background:#FBFCFD; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:2; }
   thead th.new-col { color:var(--new-accent); }
   tbody td { padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tr.row-nudged { background:#FFFAEB; }
+  tr.row-flagged { background:#FEF2F2; }
   tbody tr:last-child td { border-bottom:none; }
   .name-cell { display:flex; align-items:center; gap:10px; }
   .avt { width:30px;height:30px;border-radius:50%; background:#CFE9EA; color:#2B7A7E; font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center; position:relative; flex-shrink:0; }
@@ -158,6 +160,9 @@
   .digest-dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
   .digest-name { font-size:12.5px; font-weight:700; }
   .digest-meta { font-size:11px; color:var(--gray-500); margin-top:1px; }
+  .digest-tag { display:inline-block; margin-left:8px; font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; vertical-align:middle; }
+  .digest-tag-nudge { background:#FFF3CD; color:#8A6416; }
+  .digest-tag-flag { background:#FDE2E2; color:var(--red); }
   .digest-empty { padding:26px 18px; text-align:center; font-size:12px; color:var(--gray-500); }
   .digest-section-head { padding:10px 18px 4px; font-size:10.5px; font-weight:700; color:var(--gray-500); text-transform:uppercase; }
   .weekly-row { padding:12px 18px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
@@ -329,7 +334,7 @@ const CANDIDATES = [
   { id:5,  name:"James Whitfield",      prof:"LPN", facility:"Carefam at Brockton", stage:"paperwork",   sla:"waiting", waitingDays:16, slaSub:"Candidate side — not owner SLA", note:"16d, no response — past normal cadence, worth a call", noteColor:"amber" },
   { id:6,  name:"Maria Alvarez",        prof:"CNA", facility:"Carefam at Sharon",   stage:"request",     sla:"none",    slaSub:"" },
   { id:7,  name:"Linda Okoro",          prof:"RN",  facility:"Carefam at Brockton", stage:"interviewing",sla:"ontrack", slaSub:"4d until SLA" },
-  { id:8,  name:"Carlos Mendez",        prof:"HHA", facility:"Carefam at Meridian", stage:"paperwork",   sla:"atrisk",  slaSub:"65% of SLA elapsed", nudged:true },
+  { id:8,  name:"Carlos Mendez",        prof:"HHA", facility:"Carefam at Meridian", stage:"paperwork",   sla:"atrisk",  slaSub:"65% of SLA elapsed", nudged:true, nudgedDaysAgo:1 },
   { id:9,  name:"Angela Fitzgerald",    prof:"LPN", facility:"Carefam at Wrentham", stage:"orientation", sla:"ontrack", slaSub:"1d until SLA", note:"Pending orientation date", noteColor:"gray" },
   { id:10, name:"Priya Nair",           prof:"RN",  facility:"Carefam at Taunton",  stage:"request",     sla:"none",    slaSub:"" },
   { id:11, name:"Robert Chen",          prof:"CNA", facility:"Carefam at Brockton", stage:"paperwork",   sla:"waiting", waitingDays:9,  slaSub:"Candidate side — not owner SLA", note:"No response to paperwork request, 9d", noteColor:"gray" },
@@ -343,8 +348,8 @@ const CANDIDATES = [
   { id:19, name:"Daniel Feld",          prof:"CNA", facility:"Carefam at Wrentham", stage:"interviewing",sla:"ontrack", slaSub:"6d until SLA" },
   { id:20, name:"Yolanda Reyes",        prof:"LPN", facility:"Carefam at Taunton",  stage:"request",     sla:"none",    slaSub:"" },
   { id:21, name:"Elena Cruz",           prof:"LPN", facility:"Carefam at Wrentham", stage:"paperwork",   sla:"breach",  slaSub:"no update in 7d" },
-  { id:22, name:"Patricia Woods",       prof:"HHA", facility:"Carefam at Meridian", stage:"paperwork",   sla:"breach",  slaSub:"no update in 9d", nudged:true, flagged:true, flaggedDaysAgo:5 },
-  { id:23, name:"Marcus Bellamy",       prof:"RN",  facility:"Carefam at Taunton",  stage:"orientation", sla:"breach",  slaSub:"no update in 4d", nudged:true, flagged:true, flaggedDaysAgo:1, autoFlagged:true }
+  { id:22, name:"Patricia Woods",       prof:"HHA", facility:"Carefam at Meridian", stage:"paperwork",   sla:"breach",  slaSub:"no update in 9d", nudged:true, nudgedDaysAgo:7, flagged:true, flaggedDaysAgo:5 },
+  { id:23, name:"Marcus Bellamy",       prof:"RN",  facility:"Carefam at Taunton",  stage:"orientation", sla:"breach",  slaSub:"no update in 4d", nudged:true, nudgedDaysAgo:4, flagged:true, flaggedDaysAgo:1, autoFlagged:true }
 ];
 
 const STAGE_META = {
@@ -499,7 +504,11 @@ function renderRows(list) {
         // a specific claim (a person or the 3-day auto-flag acted on this),
         // and it's false for a candidate that's merely breached with no
         // Nudge, Flag, or auto-flag on record yet.
-        const selfLabel = c.flagged ? "Flagged" : "Breached";
+        // This previously ignored c.nudged entirely — a nudged breach row
+        // would tint amber/red but the text never said a nudge happened or
+        // when, which is exactly the gap that made the tint decorative
+        // instead of informative.
+        const selfLabel = c.flagged ? "Flagged" : c.nudged ? `Breached, nudged ${c.nudgedDaysAgo}d ago` : "Breached";
         actionBtn = `<div class="note-red" style="font-weight:600;">${selfLabel} — visible to your regional recruiter</div>`;
       } else if (c.flagged) {
         // Auto-flag is anchored to time since BREACH, not time since Nudge —
@@ -519,7 +528,7 @@ function renderRows(list) {
         // secondary action still deserves button treatment).
         actionBtn = `<div id="action-${c.id}" class="action-row">
            ${c.nudged
-             ? `<div class="sla-action-btn nudged">Nudge sent →</div>`
+             ? `<div class="sla-action-btn nudged">Nudge sent · ${c.nudgedDaysAgo}d ago</div>`
              : `<div class="sla-action-btn" onclick="nudge(${c.id})">Nudge ${own.name} →</div>`}
            <div class="sla-action-btn flag-btn" onclick="flagEscalation(${c.id})" title="Flag for manual escalation">Flag</div>
          </div>`;
@@ -533,17 +542,25 @@ function renderRows(list) {
       if (isSelfView) {
         // Same accuracy fix as the breach branch above: don't claim "no
         // action logged" for a candidate who was, in fact, already nudged.
+        // "When" now shows too — not just that it happened.
         actionBtn = c.nudged
-          ? `<div class="note-amber" style="font-weight:600;">Approaching SLA — nudge received</div>`
+          ? `<div class="note-amber" style="font-weight:600;">Approaching SLA — nudge received ${c.nudgedDaysAgo}d ago</div>`
           : `<div class="note-amber" style="font-weight:600;">Approaching SLA — no action logged yet</div>`;
       } else {
         actionBtn = c.nudged
-          ? `<div class="sla-action-btn nudged">Nudge sent →</div>`
+          ? `<div class="sla-action-btn nudged">Nudge sent · ${c.nudgedDaysAgo}d ago</div>`
           : `<div class="sla-action-btn atrisk-nudge" onclick="nudge(${c.id})">Nudge ${own.name} →</div>`;
       }
     }
+    // Row tint scoped to self-view only. In the regional's aggregate view,
+    // tinting already-actioned rows fights the actual triage job — that
+    // screen's job is making what's NOT yet handled stand out (via the SLA
+    // severity color already there), not highlighting what's done. Self-view
+    // is different: the tint pairs with real "you were nudged, when" text
+    // now, so it's reinforcing a signal, not competing with one.
+    const rowTint = isSelfView ? (c.flagged ? "row-flagged" : (c.nudged ? "row-nudged" : "")) : "";
     return `
-      <tr>
+      <tr class="${rowTint}">
         <td><div class="name-cell"><div class="avt">${initials(c.name)}<span class="role-dot"></span></div><div class="name-txt">${c.name}</div></div></td>
         <td class="sub">${c.prof}</td>
         <td><div class="fac-name">${c.facility}</div><div class="fac-type">${fac.type}</div></td>
@@ -558,32 +575,44 @@ function renderRows(list) {
 
 function renderNotifications() {
   const isSelf = state.ownerView !== "All";
-  const flagged = CANDIDATES.filter(c =>
-    c.sla === "breach" && (state.ownerView === "All" || owner(c.facility, c.stage).name === state.ownerView)
+  // Breach (as before) PLUS at-risk candidates someone specifically
+  // nudged — not all at-risk, which would just recreate generic noise.
+  // A deliberate human escalation earns the same "can't miss it" push
+  // treatment breach already gets automatically; an untouched candidate
+  // crossing 70% on its own doesn't.
+  const items = CANDIDATES.filter(c =>
+    (c.sla === "breach" || (c.sla === "atrisk" && c.nudged)) &&
+    (state.ownerView === "All" || owner(c.facility, c.stage).name === state.ownerView)
   );
   const badge = document.getElementById("bell-count");
   const label = document.getElementById("notif-count-label");
   const list = document.getElementById("notif-list");
-  if (flagged.length === 0) {
+  if (items.length === 0) {
     badge.style.display = "none";
     label.textContent = "All clear";
     list.innerHTML = `<div class="notif-empty">No candidates need action right now.</div>`;
     return;
   }
   badge.style.display = "flex";
-  badge.textContent = flagged.length;
-  label.textContent = isSelf ? flagged.length + " breached" : flagged.length + " need action";
-  list.innerHTML = flagged.map(c => `
+  badge.textContent = items.length;
+  label.textContent = isSelf ? items.length + " need your attention" : items.length + " need action";
+  list.innerHTML = items.map(c => {
+    const isBreach = c.sla === "breach";
+    const sub = isBreach
+      ? `${STAGE_META[c.stage].label} — ${alertText(c, owner(c.facility, c.stage), isSelf)}`
+      : `${STAGE_META[c.stage].label} — ${isSelf ? "you were nudged" : "nudged"} ${c.nudgedDaysAgo}d ago, ${c.slaSub}`;
+    return `
     <div class="notif-item">
-      <div class="notif-dot breach"></div>
+      <div class="notif-dot ${isBreach ? 'breach' : 'risk'}"></div>
       <div class="notif-body">
         <div class="notif-name">${c.name} — ${c.facility}</div>
-        <div class="notif-sub">${STAGE_META[c.stage].label} — ${alertText(c, owner(c.facility, c.stage), isSelf)}</div>
+        <div class="notif-sub">${sub}</div>
         ${isSelf
-          ? `<div class="notif-sub" style="font-style:italic;">Visible to your regional recruiter</div>`
-          : `<div class="notif-action" onclick="nudge(${c.id})">${c.nudged ? 'Nudged ✓' : 'Nudge'}</div>`}
+          ? `<div class="notif-sub" style="font-style:italic;">${isBreach ? "Visible to your regional recruiter" : "Still before breach — act to avoid escalation"}</div>`
+          : (isBreach ? `<div class="notif-action" onclick="nudge(${c.id})">${c.nudged ? 'Nudged ✓' : 'Nudge'}</div>` : `<div class="notif-sub" style="font-style:italic;">Already nudged</div>`)}
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 
 function render() {
@@ -623,6 +652,7 @@ function toggleMenu(e, id) {
 function nudge(id) {
   const c = CANDIDATES.find(c => c.id === id);
   c.nudged = true;
+  c.nudgedDaysAgo = 0;
   render();
 }
 function flagEscalation(id) {
@@ -657,14 +687,21 @@ function openDigest() {
       body.innerHTML = `<div class="digest-empty">Nothing at or past the at-risk threshold for ${targetOwner} today.</div>`;
     } else {
       let html = "";
-      const rowHtml = (c, repeat) => `
+      const rowHtml = (c, repeat) => {
+        const actionTag = c.flagged
+          ? `<span class="digest-tag digest-tag-flag">🚩 Flagged ${c.flaggedDaysAgo}d ago${c.flaggedDaysAgo >= FLAG_ESCALATE_DAYS ? " — unresolved" : ""}</span>`
+          : c.nudged
+            ? `<span class="digest-tag digest-tag-nudge">👋 Nudged ${c.nudgedDaysAgo}d ago</span>`
+            : "";
+        return `
           <div class="digest-row ${repeat ? 'digest-row-repeat' : ''}">
             <div class="digest-dot" style="background:${c.sla === 'breach' ? 'var(--red)' : 'var(--amber-dot)'}"></div>
             <div>
-              <div class="digest-name">${c.name} — ${c.prof} — ${c.facility}</div>
+              <div class="digest-name">${c.name} — ${c.prof} — ${c.facility}${actionTag}</div>
               <div class="digest-meta">${STAGE_META[c.stage].label} · ${c.sla === "breach" ? alertText(c, owner(c.facility, c.stage), true) : c.slaSub}</div>
             </div>
           </div>`;
+      };
       if (newRows.length > 0) {
         html += `<div class="digest-section-head">New today</div>`;
         html += newRows.map(c => rowHtml(c, false)).join("");
